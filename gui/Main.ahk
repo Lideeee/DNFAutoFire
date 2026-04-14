@@ -275,10 +275,10 @@ MainSetting(*) {
 }
 
 MainCheckUpdate(*) {
-    postUrl := "https://bbs.colg.cn/thread-8894989-1-1.html"
+    postUrl := "https://github.com/Lideeee/DNFAutoFire-0.2.1"
     try Run(postUrl)
     catch {
-        MsgBox("打开原帖地址失败，请手动访问：`n" postUrl,, "Icon!")
+        MsgBox("打开链接失败，请手动访问：`n" postUrl,, "Icon!")
     }
 }
 
