@@ -275,7 +275,7 @@ MainSetting(*) {
 }
 
 MainCheckUpdate(*) {
-    postUrl := "https://github.com/Lideeee/DNFAutoFire-0.2.1"
+    postUrl := "https://github.com/Lideeee/DNFAutoFire-0.2.2"
     try Run(postUrl)
     catch {
         MsgBox("打开链接失败，请手动访问：`n" postUrl,, "Icon!")

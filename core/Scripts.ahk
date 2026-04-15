@@ -252,9 +252,16 @@ StopAutoFire(){
 
 ; 单进程多定时器：每个键独立 tick，避免多个键串行争用
 AutoFireSingleKeyTick(pressKey, keyCode) {
-    if (GetKeyState(pressKey, "P") || GetKeyState(pressKey)) {
+    ; 定时器高频执行时可能重入；重入会破坏同键 Down/Up 配对并诱发卡键
+    static keyBusy := Map()
+    if (keyBusy.Has(pressKey) && keyBusy[pressKey]) {
+        return
+    }
+    keyBusy[pressKey] := true
+    try if (GetKeyState(pressKey, "P")) {
         SendIP(keyCode)
     }
+    finally keyBusy[pressKey] := false
 }
 
 ; 设置所有关闭连发
