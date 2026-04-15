@@ -21,7 +21,7 @@ gSettingGui.Add("Link", "x16 y82 w368 h24", "<a href=`"https://github.com/mouyas
 gSettingGui.Add("Text", "x16 y104 w368 h24 +0x200", "原帖地址：")
 gSettingGui.Add("Link", "x16 y126 w368 h24", "<a href=`"https://bbs.colg.cn/thread-8894989-1-1.html`">https://bbs.colg.cn/thread-8894989-1-1.html</a>")
 gSettingGui.Add("Text", "x16 y148 w368 h24 +0x200", "二次开发：")
-gSettingGui.Add("Link", "x16 y170 w368 h24", "<a href=`"https://github.com/Lideeee/DNFAutoFire-0.2.2`">https://github.com/Lideeee/DNFAutoFire-0.2.2</a>")
+gSettingGui.Add("Link", "x16 y170 w368 h24", "<a href=`"https://github.com/Lideeee/DNFAutoFire`">https://github.com/Lideeee/DNFAutoFire</a>")
 gSettingCtrls["Tab"].UseTab()
 
 SettingGetCtrl(name) {
