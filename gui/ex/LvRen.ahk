@@ -60,9 +60,18 @@ LvRenAddKey(*) {
     }
     LvRenChangeListGui(__LvRenSkillKeys)
     ctrl := LvRenGetCtrl("LvRenKeysListBox")
-    for i, item in __LvRenSkillKeys {
+    displayIdx := 0
+    loop __LvRenSkillKeys.Length {
+        if !__LvRenSkillKeys.Has(A_Index) {
+            continue
+        }
+        item := __LvRenSkillKeys[A_Index]
+        if (item = "") {
+            continue
+        }
+        displayIdx++
         if (item = key) {
-            ctrl.Choose(i)
+            ctrl.Choose(displayIdx)
             break
         }
     }
@@ -87,7 +96,14 @@ LvRenChangeListGui(keys) {
     ctrl := LvRenGetCtrl("LvRenKeysListBox")
     ctrl.Delete()
     cnt := 0
-    for key in keys {
+    if !IsObject(keys) {
+        keys := []
+    }
+    loop keys.Length {
+        if !keys.Has(A_Index) {
+            continue
+        }
+        key := keys[A_Index]
         if (key != "") {
             ctrl.Add([key])
             cnt++
@@ -101,10 +117,15 @@ LvRenChangeListGui(keys) {
 LvRenSaveConfig() {
     global __LvRenSkillKeys
     keysString := ""
-    for i, v in __LvRenSkillKeys {
-        keysString .= v "|"
+    loop __LvRenSkillKeys.Length {
+        if !__LvRenSkillKeys.Has(A_Index) {
+            continue
+        }
+        keysString .= __LvRenSkillKeys[A_Index] "|"
     }
-    keysString := SubStr(keysString, 1, StrLen(keysString) - 1)
+    if (StrLen(keysString) > 0) {
+        keysString := SubStr(keysString, 1, StrLen(keysString) - 1)
+    }
     SavePreset(GetNowSelectPreset(), "LvRenSkillKeys", keysString)
     SavePreset(GetNowSelectPreset(), "LvRenShotKey", LvRenGetCtrl("LvRenShotKey").Text)
 }

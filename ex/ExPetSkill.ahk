@@ -10,13 +10,20 @@ ExPetSkill(){
         }
         keyCode := Key2NoVkSC(ShotKey)
         pressKeys := []
-        for i, sk in SkillKeys{
-            pressKeys.Push(Key2PressKey(sk))
+        loop SkillKeys.Length {
+            if !SkillKeys.Has(A_Index) {
+                continue
+            }
+            pressKeys.Push(Key2PressKey(SkillKeys[A_Index]))
         }
         loop {
             if(WinActive("ahk_group DNF")) {
                 isNeedSend := false
-                for j, pressKey in pressKeys{
+                loop pressKeys.Length {
+                    if !pressKeys.Has(A_Index) {
+                        continue
+                    }
+                    pressKey := pressKeys[A_Index]
                     if (GetKeyState(pressKey, "P") || GetKeyState(pressKey)) {
                         isNeedSend := true
                         break

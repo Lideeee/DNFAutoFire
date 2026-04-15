@@ -139,10 +139,15 @@ _CreateDefaultConfigIni() {
 LoadAllPresetString(){
     presetList := LoadAllPreset()
     presetListStr := ""
-    for i, value in presetList {
-        presetListStr := presetListStr . value . "|"
+    loop presetList.Length {
+        if !presetList.Has(A_Index) {
+            continue
+        }
+        presetListStr := presetListStr . presetList[A_Index] . "|"
     }
-    presetListStr := SubStr(presetListStr, 1, StrLen(presetListStr) - 1)
+    if (StrLen(presetListStr) > 0) {
+        presetListStr := SubStr(presetListStr, 1, StrLen(presetListStr) - 1)
+    }
     return presetListStr
 }
 

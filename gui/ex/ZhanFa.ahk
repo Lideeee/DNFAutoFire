@@ -60,9 +60,18 @@ ZhanFaAddKey(*) {
     }
     ZhanFaChangeListGui(__ZhanFaSkillKeys)
     ctrl := ZhanFaGetCtrl("ZhanFaKeysListBox")
-    for i, item in __ZhanFaSkillKeys {
+    displayIdx := 0
+    loop __ZhanFaSkillKeys.Length {
+        if !__ZhanFaSkillKeys.Has(A_Index) {
+            continue
+        }
+        item := __ZhanFaSkillKeys[A_Index]
+        if (item = "") {
+            continue
+        }
+        displayIdx++
         if (item = key) {
-            ctrl.Choose(i)
+            ctrl.Choose(displayIdx)
             break
         }
     }
@@ -87,7 +96,14 @@ ZhanFaChangeListGui(keys) {
     ctrl := ZhanFaGetCtrl("ZhanFaKeysListBox")
     ctrl.Delete()
     cnt := 0
-    for key in keys {
+    if !IsObject(keys) {
+        keys := []
+    }
+    loop keys.Length {
+        if !keys.Has(A_Index) {
+            continue
+        }
+        key := keys[A_Index]
         if (key != "") {
             ctrl.Add([key])
             cnt++
@@ -101,10 +117,15 @@ ZhanFaChangeListGui(keys) {
 ZhanFaSaveConfig() {
     global __ZhanFaSkillKeys
     keysString := ""
-    for i, v in __ZhanFaSkillKeys {
-        keysString .= v "|"
+    loop __ZhanFaSkillKeys.Length {
+        if !__ZhanFaSkillKeys.Has(A_Index) {
+            continue
+        }
+        keysString .= __ZhanFaSkillKeys[A_Index] "|"
     }
-    keysString := SubStr(keysString, 1, StrLen(keysString) - 1)
+    if (StrLen(keysString) > 0) {
+        keysString := SubStr(keysString, 1, StrLen(keysString) - 1)
+    }
     SavePreset(GetNowSelectPreset(), "ZhanFaSkillKeys", keysString)
     SavePreset(GetNowSelectPreset(), "ZhanFaShotKey", ZhanFaGetCtrl("ZhanFaShotKey").Text)
 }

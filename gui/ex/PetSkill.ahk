@@ -60,9 +60,18 @@ PetSkillAddKey(*) {
     }
     PetSkillChangeListGui(__PetSkillSkillKeys)
     ctrl := PetSkillGetCtrl("PetSkillKeysListBox")
-    for i, item in __PetSkillSkillKeys {
+    displayIdx := 0
+    loop __PetSkillSkillKeys.Length {
+        if !__PetSkillSkillKeys.Has(A_Index) {
+            continue
+        }
+        item := __PetSkillSkillKeys[A_Index]
+        if (item = "") {
+            continue
+        }
+        displayIdx++
         if (item = key) {
-            ctrl.Choose(i)
+            ctrl.Choose(displayIdx)
             break
         }
     }
@@ -87,7 +96,14 @@ PetSkillChangeListGui(keys) {
     ctrl := PetSkillGetCtrl("PetSkillKeysListBox")
     ctrl.Delete()
     cnt := 0
-    for key in keys {
+    if !IsObject(keys) {
+        keys := []
+    }
+    loop keys.Length {
+        if !keys.Has(A_Index) {
+            continue
+        }
+        key := keys[A_Index]
         if (key != "") {
             ctrl.Add([key])
             cnt++
@@ -101,10 +117,15 @@ PetSkillChangeListGui(keys) {
 PetSkillSaveConfig() {
     global __PetSkillSkillKeys
     keysString := ""
-    for i, v in __PetSkillSkillKeys {
-        keysString .= v "|"
+    loop __PetSkillSkillKeys.Length {
+        if !__PetSkillSkillKeys.Has(A_Index) {
+            continue
+        }
+        keysString .= __PetSkillSkillKeys[A_Index] "|"
     }
-    keysString := SubStr(keysString, 1, StrLen(keysString) - 1)
+    if (StrLen(keysString) > 0) {
+        keysString := SubStr(keysString, 1, StrLen(keysString) - 1)
+    }
     SavePreset(GetNowSelectPreset(), "PetSkillSkillKeys", keysString)
     SavePreset(GetNowSelectPreset(), "PetSkillShotKey", PetSkillGetCtrl("PetSkillShotKey").Text)
 }

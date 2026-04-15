@@ -62,9 +62,18 @@ GuanYuAddKey(*) {
     }
     GuanYuChangeListGui(__GuanYuSkillKeys)
     ctrl := GuanYuGetCtrl("GuanYuKeysListBox")
-    for i, item in __GuanYuSkillKeys {
+    displayIdx := 0
+    loop __GuanYuSkillKeys.Length {
+        if !__GuanYuSkillKeys.Has(A_Index) {
+            continue
+        }
+        item := __GuanYuSkillKeys[A_Index]
+        if (item = "") {
+            continue
+        }
+        displayIdx++
         if (item = key) {
-            ctrl.Choose(i)
+            ctrl.Choose(displayIdx)
             break
         }
     }
@@ -89,7 +98,14 @@ GuanYuChangeListGui(keys) {
     ctrl := GuanYuGetCtrl("GuanYuKeysListBox")
     ctrl.Delete()
     cnt := 0
-    for key in keys {
+    if !IsObject(keys) {
+        keys := []
+    }
+    loop keys.Length {
+        if !keys.Has(A_Index) {
+            continue
+        }
+        key := keys[A_Index]
         if (key != "") {
             ctrl.Add([key])
             cnt++
@@ -103,8 +119,11 @@ GuanYuChangeListGui(keys) {
 GuanYuSaveConfig() {
     global __GuanYuSkillKeys
     keysString := ""
-    for v in __GuanYuSkillKeys {
-        keysString .= v "|"
+    loop __GuanYuSkillKeys.Length {
+        if !__GuanYuSkillKeys.Has(A_Index) {
+            continue
+        }
+        keysString .= __GuanYuSkillKeys[A_Index] "|"
     }
     if (StrLen(keysString) > 0) {
         keysString := SubStr(keysString, 1, StrLen(keysString) - 1)

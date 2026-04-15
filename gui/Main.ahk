@@ -251,9 +251,13 @@ MainLoadAllPreset() {
     presetNameCtrl.Text := nowSelectPreset
 
     idx := 0
-    for i, txt in StrSplit(presetList, "|") {
-        if (txt = nowSelectPreset) {
-            idx := i
+    presetItems := StrSplit(presetList, "|")
+    loop presetItems.Length {
+        if !presetItems.Has(A_Index) {
+            continue
+        }
+        if (presetItems[A_Index] = nowSelectPreset) {
+            idx := A_Index
             break
         }
     }

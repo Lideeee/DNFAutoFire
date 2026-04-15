@@ -48,7 +48,12 @@ ShowGuiQuickSwitch(*) {
     ctrl.Delete()
     idx := 0
     cnt := 0
-    for i, item in StrSplit(presetList, "|") {
+    presetItems := StrSplit(presetList, "|")
+    loop presetItems.Length {
+        if !presetItems.Has(A_Index) {
+            continue
+        }
+        item := presetItems[A_Index]
         if (item != "") {
             ctrl.Add([item])
             cnt++
