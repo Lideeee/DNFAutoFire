@@ -122,36 +122,14 @@ GetOriginKeyName(key){
     return keyName
 }
 
-; 用于屏蔽按键原始功能（v2 Hotkey 回调会传入额外汇总参数，故用 * 吸收）
-OriginalBlocking(key, *){
-    SendInput("{Blind}{" key " DownTemp}")
-    Sleep(1)
-    KeyWait(key)
-    SendInput("{Blind}{" key " Up}")
-}
-
-; 屏蔽按键原始功能
+; 按用户要求：不屏蔽原键。保留函数是为了兼容现有调用点。
 SetOriginalBlocking(key){
-    keyName := GetOriginKeyName(key)
-    if (!InStr(keyName, "Num")){
-        keyName := Key2SC(keyName)
-    }
-    ; v2：直接用函数引用，勿用 Func("名称")，便于静态检查与运行一致
-    fn := OriginalBlocking.Bind(Format("{:L}", keyName))
-    try{
-        Hotkey("$*" keyName, fn, "On")
-    }
+    return
 }
 
-; 恢复按键原始功能
+; 不屏蔽原键时，无需恢复操作
 SetOriginalDirect(key){
-    keyName := GetOriginKeyName(key)
-    if (!InStr(keyName, "Num")){
-        keyName := Key2SC(keyName)
-    }
-    try{
-        Hotkey("$*" keyName, "Off")
-    }
+    return
 }
 
 ; 设置托盘图标状态
@@ -165,11 +143,20 @@ StartAutoFire(){
     global _AutoFireEnableKeys
     global _AutoFireThreads
     global _AutoFireSingleProcessTimers
+    global _AutoFireTimeUnlocked
+    if (!IsSet(_AutoFireTimeUnlocked)) {
+        _AutoFireTimeUnlocked := false
+    }
     intervalMs := Round(LoadPreset(GetNowSelectPreset(), "MainAutoFireInterval", 20) + 0)
     if (intervalMs < 1) {
         intervalMs := 1
     } else if (intervalMs > 200) {
         intervalMs := 200
+    }
+    ; 提升定时器精度，降低高频连发的抖动/卡顿
+    if (!_AutoFireTimeUnlocked) {
+        try UnlockSystemTimeLimit()
+        _AutoFireTimeUnlocked := true
     }
     _AutoFireThreads := []
     _AutoFireSingleProcessTimers := []
@@ -224,6 +211,7 @@ StartEx(){
 StopAutoFire(){
     global _AutoFireThreads
     global _AutoFireSingleProcessTimers
+    global _AutoFireTimeUnlocked
     allKeys := GetAllKeys()
     try allKeyCount := allKeys.Length
     catch {
@@ -248,10 +236,19 @@ StopAutoFire(){
     _AutoFireSingleProcessTimers := []
     _AutoFireThreads := []
     SetTrayRunningIcon(false)
+    ; 恢复系统计时精度（避免长期占用 1ms period）
+    if (IsSet(_AutoFireTimeUnlocked) && _AutoFireTimeUnlocked) {
+        try RestoreSystemTimeLimit()
+        _AutoFireTimeUnlocked := false
+    }
 }
 
 ; 单进程多定时器：每个键独立 tick，避免多个键串行争用
 AutoFireSingleKeyTick(pressKey, keyCode) {
+    ; 仅在游戏窗口激活时发送，避免切出游戏后仍然连发
+    if !WinActive("ahk_group DNF") {
+        return
+    }
     ; 定时器高频执行时可能重入；重入会破坏同键 Down/Up 配对并诱发卡键
     static keyBusy := Map()
     if (keyBusy.Has(pressKey) && keyBusy[pressKey]) {

@@ -8,8 +8,8 @@
 ;@Ahk2Exe-SetCopyright 某亚瑟
 ;@Ahk2Exe-SetLanguage 0x0804
 ;@Ahk2Exe-SetProductName DAF连发工具
-;@Ahk2Exe-SetProductVersion 0.2.2
-;@Ahk2Exe-SetVersion 0.2.2
+;@Ahk2Exe-SetProductVersion 0.2.3
+;@Ahk2Exe-SetVersion 0.2.3
 
 ; 允许 SubProcessThread 启动并存子进程；Ignore 会把子进程直接拒绝掉
 #SingleInstance Off
@@ -21,7 +21,7 @@ if (A_Args.Length >= 1 && InStr(A_Args[1], "/Run=")) {
     A_IconHidden := true
 }
 
-global __Version := "0.2.2"
+global __Version := "0.2.3"
 
 #Include <RunWithAdministrator>
 #Include <MultipleThread>
@@ -73,6 +73,12 @@ try TraySetIcon(A_ScriptDir "\icon_main.ico")
 
 Exit(*) {
     ExitApp()
+}
+
+; 确保退出时停止连发并恢复系统计时精度（timeBeginPeriod）
+OnExit(CleanupOnExit)
+CleanupOnExit(*) {
+    try StopAutoFire()
 }
 
 global _AutoFireThreads := []
