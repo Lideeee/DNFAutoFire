@@ -16,23 +16,45 @@ ExGuanYu(){
         }
         keyCode := Key2NoVkSC(shotKey)
         pressKeys := []
+        keyDownState := Map()
+        pendingTriggerAt := Map()
         for sk in skillKeys{
-            pressKeys.Push(Key2PressKey(sk))
+            pressKey := Key2PressKey(sk)
+            pressKeys.Push(pressKey)
+            keyDownState[pressKey] := false
+            pendingTriggerAt[pressKey] := 0
         }
         loop {
             if(WinActive("ahk_group DNF")) {
-                isNeedSend := false
+                now := A_TickCount
                 for pressKey in pressKeys{
-                    if (GetKeyState(pressKey, "P") || GetKeyState(pressKey)) {
-                        isNeedSend := true
-                        break
+                    isDown := (GetKeyState(pressKey, "P") || GetKeyState(pressKey))
+                    wasDown := keyDownState.Has(pressKey) ? keyDownState[pressKey] : false
+
+                    ; 只在按下边沿登记一次触发，不跟随按住连发
+                    if (isDown && !wasDown) {
+                        pendingTriggerAt[pressKey] := now + delayMs
+                    }
+
+                    ; 到达延迟时间后仅触发一次
+                    triggerAt := pendingTriggerAt.Has(pressKey) ? pendingTriggerAt[pressKey] : 0
+                    if (triggerAt > 0 && now >= triggerAt) {
+                        SendIP(keyCode)
+                        pendingTriggerAt[pressKey] := 0
+                    }
+
+                    ; 松开后允许下一次按下重新触发
+                    if (!isDown) {
+                        keyDownState[pressKey] := false
+                    } else {
+                        keyDownState[pressKey] := true
                     }
                 }
-                if (isNeedSend) {
-                    if (delayMs > 0) {
-                        Sleep(delayMs)
-                    }
-                    SendIP(keyCode)
+            } else {
+                ; 切出游戏时清空状态，避免切回后误触发
+                for pressKey in pressKeys {
+                    keyDownState[pressKey] := false
+                    pendingTriggerAt[pressKey] := 0
                 }
             }
             Sleep(1)

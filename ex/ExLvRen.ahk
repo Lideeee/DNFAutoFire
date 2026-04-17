@@ -4,12 +4,19 @@ ExLvRen(){
     presetName := LoadLastPreset()
     if(LoadPreset(presetName, "LvRenState", false)){
         ShotKey := LoadPreset(presetName, "LvRenShotKey", "Z")
+        intervalMs := Round(LoadPreset(presetName, "MainAutoFireInterval", 20) + 0)
+        if (intervalMs < 1) {
+            intervalMs := 1
+        } else if (intervalMs > 200) {
+            intervalMs := 200
+        }
         SkillKeys := LvRenLoadKeys(presetName)
         if (SkillKeys.Length = 0) {
             return
         }
         keyCode := Key2NoVkSC(ShotKey)
         pressKeys := []
+        nextSendAt := 0
         loop SkillKeys.Length {
             if !SkillKeys.Has(A_Index) {
                 continue
@@ -29,10 +36,18 @@ ExLvRen(){
                         break
                     }
                 }
+                now := A_TickCount
                 if (isNeedSend) {
-                    Sleep(1)
-                    SendIP(keyCode)
+                    if (now >= nextSendAt) {
+                        SendIP(keyCode)
+                        nextSendAt := now + intervalMs
+                    }
+                } else {
+                    ; 松开后重置，下一次按下可立即首发
+                    nextSendAt := 0
                 }
+            } else {
+                nextSendAt := 0
             }
             Sleep(1)
         }
