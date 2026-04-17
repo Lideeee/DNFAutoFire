@@ -10,28 +10,34 @@ ExPetSkill(){
         }
         keyCode := Key2NoVkSC(ShotKey)
         pressKeys := []
+        keyDownState := Map()
         loop SkillKeys.Length {
             if !SkillKeys.Has(A_Index) {
                 continue
             }
-            pressKeys.Push(Key2PressKey(SkillKeys[A_Index]))
+            pressKey := Key2PressKey(SkillKeys[A_Index])
+            pressKeys.Push(pressKey)
+            keyDownState[pressKey] := false
         }
         loop {
             if(WinActive("ahk_group DNF")) {
-                isNeedSend := false
                 loop pressKeys.Length {
                     if !pressKeys.Has(A_Index) {
                         continue
                     }
                     pressKey := pressKeys[A_Index]
-                    if (GetKeyState(pressKey, "P") || GetKeyState(pressKey)) {
-                        isNeedSend := true
-                        break
+                    isDown := (GetKeyState(pressKey, "P") || GetKeyState(pressKey))
+                    wasDown := keyDownState.Has(pressKey) ? keyDownState[pressKey] : false
+                    ; 只在物理按键从抬起->按下时触发一次，不跟随按住连发
+                    if (isDown && !wasDown) {
+                        SendIP(keyCode)
                     }
+                    keyDownState[pressKey] := isDown
                 }
-                if (isNeedSend) {
-                    Sleep(1)
-                    SendIP(keyCode)
+            } else {
+                ; 切出游戏时重置边沿状态，避免切回后出现粘连
+                for k in pressKeys {
+                    keyDownState[k] := false
                 }
             }
             Sleep(1)
