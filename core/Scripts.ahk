@@ -384,10 +384,13 @@ SetDNFWindowClass(){
     GroupAdd("DNF", "地下城与勇士")
     GroupAdd("DNF", "Dungeon & Fighter")
     GroupAdd("DNF", "Dungeon Fighter Online")
+    ; 次元对决（独立客户端）
+    GroupAdd("DNF", "次元对决")
     ;
     ; 2) 进程匹配（尽量覆盖常见命名；如果你的进程名不同，后面我再按诊断结果补）
     GroupAdd("DNF", "ahk_exe dnf.exe")
     GroupAdd("DNF", "ahk_exe DNF.exe")
     GroupAdd("DNF", "ahk_exe DungeonFighter.exe")
     GroupAdd("DNF", "ahk_exe DFO.exe")
+    GroupAdd("DNF", "ahk_exe DNF_SGM.exe")
 }
