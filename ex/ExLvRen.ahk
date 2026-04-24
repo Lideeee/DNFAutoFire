@@ -31,7 +31,7 @@ ExLvRen(){
                         continue
                     }
                     pressKey := pressKeys[A_Index]
-                    if (GetKeyState(pressKey, "P") || GetKeyState(pressKey)) {
+                    if (GetKeyState(pressKey, "P")) {
                         isNeedSend := true
                         break
                     }

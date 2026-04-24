@@ -28,7 +28,7 @@ ExGuanYu(){
             if(WinActive("ahk_group DNF")) {
                 now := A_TickCount
                 for pressKey in pressKeys{
-                    isDown := (GetKeyState(pressKey, "P") || GetKeyState(pressKey))
+                    isDown := GetKeyState(pressKey, "P")
                     wasDown := keyDownState.Has(pressKey) ? keyDownState[pressKey] : false
 
                     ; 只在按下边沿登记一次触发，不跟随按住连发

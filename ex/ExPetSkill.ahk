@@ -26,7 +26,7 @@ ExPetSkill(){
                         continue
                     }
                     pressKey := pressKeys[A_Index]
-                    isDown := (GetKeyState(pressKey, "P") || GetKeyState(pressKey))
+                    isDown := GetKeyState(pressKey, "P")
                     wasDown := keyDownState.Has(pressKey) ? keyDownState[pressKey] : false
                     ; 只在物理按键从抬起->按下时触发一次，不跟随按住连发
                     if (isDown && !wasDown) {

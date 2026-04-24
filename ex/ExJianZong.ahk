@@ -14,7 +14,7 @@ ExJianZong(){
         time := A_TickCount
         loop {
             if(WinActive("ahk_group DNF")) {
-                while (GetKeyState(pressKey, "P") || GetKeyState(pressKey)){
+                while (GetKeyState(pressKey, "P")){
                     counterTime := A_TickCount - time
                     if(counterTime > delay){
                         SendIP(keyCode)
