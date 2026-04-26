@@ -4,7 +4,12 @@ ExJianZong(){
     presetName := LoadLastPreset()
     if(LoadPreset(presetName, "JianZongState", false)){
         skillKey := LoadPreset(presetName, "JianZongSkillKey", "A")
-        delay := LoadPreset(presetName, "JianZongDelay", 200)
+        delay := Round(LoadPreset(presetName, "JianZongDelay", 200) + 0)
+        if (delay < 20) {
+            delay := 20
+        } else if (delay > 3000) {
+            delay := 3000
+        }
         if (skillKey = "") {
             return
         }

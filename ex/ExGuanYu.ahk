@@ -5,8 +5,8 @@ ExGuanYu(){
     if(LoadPreset(presetName, "GuanYuState", false)){
         shotKey := LoadPreset(presetName, "GuanYuShotKey", "Space")
         delayMs := Round(LoadPreset(presetName, "GuanYuDelay", 300) + 0)
-        if (delayMs < 0) {
-            delayMs := 0
+        if (delayMs < 20) {
+            delayMs := 20
         } else if (delayMs > 500) {
             delayMs := 500
         }

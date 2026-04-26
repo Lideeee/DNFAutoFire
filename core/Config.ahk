@@ -100,7 +100,57 @@ LoadAllPreset(){
             presetList.Push(SubStr(sec, 4))
         }
     }
-    return presetList
+    return ApplyPresetOrder(presetList)
+}
+
+; 将传入的预设列表按保存顺序重排：先取 PresetOrder 中仍存在的项，再补齐未记录的项
+ApplyPresetOrder(presetList) {
+    ordered := []
+    used := Map()
+    orderRaw := LoadConfig("PresetOrder", "")
+    if (orderRaw != "") {
+        for item in StrSplit(orderRaw, "|") {
+            item := Trim(item)
+            if (item = "" || used.Has(item)) {
+                continue
+            }
+            if IsValueInArray(item, presetList) {
+                ordered.Push(item)
+                used[item] := true
+            }
+        }
+    }
+    loop presetList.Length {
+        if !presetList.Has(A_Index) {
+            continue
+        }
+        name := presetList[A_Index]
+        if (name = "" || used.Has(name)) {
+            continue
+        }
+        ordered.Push(name)
+    }
+    return ordered
+}
+
+SavePresetOrder(presetList) {
+    orderRaw := ""
+    if IsObject(presetList) {
+        loop presetList.Length {
+            if !presetList.Has(A_Index) {
+                continue
+            }
+            name := Trim(presetList[A_Index])
+            if (name = "") {
+                continue
+            }
+            orderRaw .= name "|"
+        }
+    }
+    if (StrLen(orderRaw) > 0) {
+        orderRaw := SubStr(orderRaw, 1, StrLen(orderRaw) - 1)
+    }
+    SaveConfig("PresetOrder", orderRaw)
 }
 
 ; 首次运行：无 config.ini 或无任何预设节时，写入默认预设与基础设置
@@ -130,9 +180,13 @@ _CreateDefaultConfigIni() {
     SavePreset(DEFAULT_PRESET_NAME, "ZhanFaState", false)
     SavePreset(DEFAULT_PRESET_NAME, "JianZongState", false)
     SavePreset(DEFAULT_PRESET_NAME, "AutoRunState", false)
+    SavePreset(DEFAULT_PRESET_NAME, "ComboState", false)
     SavePreset(DEFAULT_PRESET_NAME, "MainAutoFireInterval", 20)
     SavePreset(DEFAULT_PRESET_NAME, "AutoRunLeftKey", "Left")
     SavePreset(DEFAULT_PRESET_NAME, "AutoRunRightKey", "Right")
+    SavePreset(DEFAULT_PRESET_NAME, "ComboTriggerKey", "X")
+    SavePreset(DEFAULT_PRESET_NAME, "ComboLoopMode", false)
+    SavePreset(DEFAULT_PRESET_NAME, "ComboSkills", "")
 }
 
 ; 以字符的方式读取所有预设

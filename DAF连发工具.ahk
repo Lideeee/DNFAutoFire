@@ -8,8 +8,8 @@
 ;@Ahk2Exe-SetCopyright 某亚瑟
 ;@Ahk2Exe-SetLanguage 0x0804
 ;@Ahk2Exe-SetProductName DAF连发工具
-;@Ahk2Exe-SetProductVersion 0.2.3
-;@Ahk2Exe-SetVersion 0.2.3
+;@Ahk2Exe-SetProductVersion 0.2.5
+;@Ahk2Exe-SetVersion 0.2.5
 
 ; 允许 SubProcessThread 启动并存子进程；Ignore 会把子进程直接拒绝掉
 #SingleInstance Off
@@ -21,7 +21,7 @@ if (A_Args.Length >= 1 && InStr(A_Args[1], "/Run=")) {
     A_IconHidden := true
 }
 
-global __Version := "0.2.3"
+global __Version := "0.2.5"
 
 #Include <RunWithAdministrator>
 #Include <MultipleThread>
@@ -51,6 +51,8 @@ EnsureConfigInitialized()
 #Include ./ex/ExJianZong.ahk
 #Include ./gui/ex/AutoRun.ahk
 #Include ./ex/ExAutoRun.ahk
+#Include .\gui\ex\Combo.ahk
+#Include .\ex\ExCombo.ahk
 
 ; 必须放在所有 #Include 之后：子进程 /Run=XXX 需要先看到 Keys.ahk 等函数定义
 SubProcessThread.ScriptStart()

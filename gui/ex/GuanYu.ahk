@@ -129,8 +129,8 @@ GuanYuSaveConfig() {
         keysString := SubStr(keysString, 1, StrLen(keysString) - 1)
     }
     delay := Round((Trim(GuanYuGetCtrl("GuanYuDelay").Text) = "" ? 300 : GuanYuGetCtrl("GuanYuDelay").Text) + 0)
-    if (delay < 0) {
-        delay := 0
+    if (delay < 20) {
+        delay := 20
     } else if (delay > 500) {
         delay := 500
     }
@@ -144,8 +144,8 @@ GuanYuLoadConfig() {
     global __GuanYuSkillKeys
     shotKey := LoadPreset(GetNowSelectPreset(), "GuanYuShotKey", "Space")
     delay := Round(LoadPreset(GetNowSelectPreset(), "GuanYuDelay", 300) + 0)
-    if (delay < 0) {
-        delay := 0
+    if (delay < 20) {
+        delay := 20
     } else if (delay > 500) {
         delay := 500
     }

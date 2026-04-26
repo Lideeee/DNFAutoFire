@@ -45,6 +45,8 @@ class SubProcessThread
                 ExJianZong()
             } else if (k = "ExAutoRun") {
                 ExAutoRun()
+            } else if (k = "ExCombo") {
+                ExCombo()
             } else {
                 ; 普通按键线程：直接走 AutoFire，避免 Func("F").Call() 在部分环境异常
                 AutoFire(GetOriginKeyName(k))

@@ -3,10 +3,22 @@
 global gMainGui := Gui("-MinimizeBox -MaximizeBox -Theme +OwnDialogs")
 global gMainCtrls := Map()
 global gPresetContextMenu := Menu()
+global gPresetBlankContextMenu := Menu()
+global gPresetDragStartIndex := 0
+global gPresetDragHoverIndex := 0
+global gPresetDragDown := false
+global gPresetDragPreviewing := false
+global gPresetSuppressChange := false
+global gPresetDragPreviewList := []
+global gPresetDragCurrentFromIndex := 0
+global gPresetDragItemName := ""
 
 gMainGui.OnEvent("Escape", MainGuiEscape)
 gMainGui.OnEvent("Close", MainGuiClose)
 gMainGui.OnEvent("ContextMenu", MainGuiContextMenu)
+OnMessage(0x0201, MainPresetListOnLButtonDown)
+OnMessage(0x0202, MainPresetListOnLButtonUp)
+OnMessage(0x0200, MainPresetListOnMouseMove)
 
 MainAdd(ctrlType, options, text := "") {
     global gMainGui, gMainCtrls
@@ -97,12 +109,15 @@ MainAdd("CheckBox", "vPetSkill x364 y400 h20 w16").OnEvent("Click", MainSaveExTo
 MainAdd("Link", "vMainPetSkill x382 y403 h20", "<a>自动宠物技能</a>").OnEvent("Click", MainPetSkill)
 MainAdd("CheckBox", "vAutoRun x364 y420 h20 w16").OnEvent("Click", MainSaveExToggle)
 MainAdd("Link", "vMainAutoRun x382 y423 h20", "<a>自动奔跑</a>").OnEvent("Click", MainAutoRun)
+MainAdd("CheckBox", "vCombo x364 y440 h20 w16").OnEvent("Click", MainSaveExToggle)
+MainAdd("Link", "vMainCombo x382 y443 h20", "<a>一键连招</a>").OnEvent("Click", MainCombo)
 gMainGui.Add("Text", "x364 y474 w170 h20 +0x200", "当前版本: v" __Version)
 
 gPresetContextMenu.Add("新建配置", MainCreatePreset)
 gPresetContextMenu.Add("重命名配置", MainRenamePreset)
 gPresetContextMenu.Add("克隆配置", MainClonePreset)
 gPresetContextMenu.Add("删除配置", MainDeletePreset)
+gPresetBlankContextMenu.Add("新建配置", MainCreatePreset)
 
 ShowGuiMain(*) {
     global gMainGui
@@ -185,6 +200,11 @@ MainClonePreset(*) {
     }
     config := IniRead(ConfigIniPath(), "预设:" oldName)
     IniWrite(config, ConfigIniPath(), "预设:" newName)
+    presetList := LoadAllPreset()
+    if !IsValueInArray(newName, presetList) {
+        presetList.Push(newName)
+    }
+    SavePresetOrder(presetList)
     SetNowSelectPreset(newName)
     MainLoadAllPreset()
 }
@@ -204,13 +224,34 @@ MainDeletePreset(*) {
         return
     }
     DeletePreset(presetName)
-    SetNowSelectPreset(LoadAllPreset()[1])
+    presetList := LoadAllPreset()
+    DeleteValueInArray(presetName, presetList)
+    SavePresetOrder(presetList)
+    if (presetList.Length > 0) {
+        SetNowSelectPreset(presetList[1])
+    }
     MainLoadAllPreset()
 }
 
 MainSetListBox(ctrl, listPipe) {
     ctrl.Delete()
     for item in StrSplit(listPipe, "|") {
+        if (item != "") {
+            ctrl.Add([item])
+        }
+    }
+}
+
+MainSetListBoxFromArray(ctrl, items) {
+    ctrl.Delete()
+    if !IsObject(items) {
+        return
+    }
+    loop items.Length {
+        if !items.Has(A_Index) {
+            continue
+        }
+        item := items[A_Index]
         if (item != "") {
             ctrl.Add([item])
         }
@@ -297,6 +338,7 @@ MainSaveEx() {
     SavePreset(presetName, "ZhanFaState", MainGetCtrl("ZhanFa").Value)
     SavePreset(presetName, "JianZongState", MainGetCtrl("JianZong").Value)
     SavePreset(presetName, "AutoRunState", MainGetCtrl("AutoRun").Value)
+    SavePreset(presetName, "ComboState", MainGetCtrl("Combo").Value)
     SavePreset(presetName, "MainAutoFireInterval", MainNormalizeAutoFireInterval())
 }
 
@@ -307,6 +349,7 @@ MainLoadEx() {
     MainGetCtrl("ZhanFa").Value := LoadPreset(GetNowSelectPreset(), "ZhanFaState", false)
     MainGetCtrl("JianZong").Value := LoadPreset(GetNowSelectPreset(), "JianZongState", false)
     MainGetCtrl("AutoRun").Value := LoadPreset(GetNowSelectPreset(), "AutoRunState", false)
+    MainGetCtrl("Combo").Value := LoadPreset(GetNowSelectPreset(), "ComboState", false)
     MainGetCtrl("MainAutoFireInterval").Text := LoadPreset(GetNowSelectPreset(), "MainAutoFireInterval", 20)
     MainNormalizeAutoFireInterval()
 }
@@ -375,7 +418,15 @@ MainAutoRun(*) {
     ShowGuiAutoRun()
 }
 
+MainCombo(*) {
+    ShowGuiCombo()
+}
+
 MainChangeListPreset(*) {
+    global gPresetSuppressChange, gPresetDragPreviewing
+    if (gPresetSuppressChange || gPresetDragPreviewing) {
+        return
+    }
     presetName := MainGetCtrl("Preset").Text
     if (presetName = "") {
         return
@@ -399,14 +450,26 @@ MainSaveCurrentPreset() {
 }
 
 MainGuiContextMenu(guiObj, ctrlObj, item, isRightClick, x, y) {
-    global gPresetContextMenu
+    global gPresetContextMenu, gPresetBlankContextMenu
     if !IsObject(ctrlObj) || ctrlObj.Name != "Preset" {
         return
     }
+    idx := MainPresetListIndexFromCursor(ctrlObj)
+    if (idx > 0) {
+        ctrlObj.Choose(idx)
+    }
     if (x != "" && y != "") {
-        gPresetContextMenu.Show(x, y)
+        if (idx > 0) {
+            gPresetContextMenu.Show(x, y)
+        } else {
+            gPresetBlankContextMenu.Show(x, y)
+        }
     } else {
-        gPresetContextMenu.Show()
+        if (idx > 0) {
+            gPresetContextMenu.Show()
+        } else {
+            gPresetBlankContextMenu.Show()
+        }
     }
 }
 
@@ -420,6 +483,11 @@ MainCreatePreset(*) {
         return
     }
     MainInitPreset(name)
+    presetList := LoadAllPreset()
+    if !IsValueInArray(name, presetList) {
+        presetList.Push(name)
+    }
+    SavePresetOrder(presetList)
     SetNowSelectPreset(name)
     MainLoadAllPreset()
 }
@@ -441,6 +509,17 @@ MainRenamePreset(*) {
     config := IniRead(ConfigIniPath(), "预设:" oldName)
     IniWrite(config, ConfigIniPath(), "预设:" newName)
     DeletePreset(oldName)
+    presetList := LoadAllPreset()
+    loop presetList.Length {
+        if !presetList.Has(A_Index) {
+            continue
+        }
+        if (presetList[A_Index] = oldName) {
+            presetList[A_Index] := newName
+            break
+        }
+    }
+    SavePresetOrder(presetList)
     SetNowSelectPreset(newName)
     MainLoadAllPreset()
 }
@@ -474,7 +553,11 @@ MainInitPreset(name) {
     SavePreset(name, "ZhanFaState", false)
     SavePreset(name, "JianZongState", false)
     SavePreset(name, "AutoRunState", false)
+    SavePreset(name, "ComboState", false)
     SavePreset(name, "MainAutoFireInterval", 20)
+    SavePreset(name, "ComboTriggerKey", "X")
+    SavePreset(name, "ComboLoopMode", false)
+    SavePreset(name, "ComboSkills", "")
 }
 
 MainSaveQuickChangeHotKey(*) {
@@ -499,4 +582,183 @@ MainLoatQuickChangeHotKey() {
     __QuickSwitchHotkey := "~$" quickChangeHotKey
     Hotkey(__QuickSwitchHotkey, ShowGuiQuickSwitch, "On")
     MainGetCtrl("QuickChangeHotKey").Value := quickChangeHotKey
+}
+
+MainPresetListIndexFromClientPoint(ctrl, x, y) {
+    if !IsObject(ctrl) {
+        return 0
+    }
+    if (x = "" || y = "") {
+        return 0
+    }
+    lp := (y << 16) | (x & 0xFFFF)
+    ret := DllCall("SendMessage", "ptr", ctrl.Hwnd, "uint", 0x01A9, "ptr", 0, "ptr", lp, "ptr")
+    outside := (ret >> 16) & 0xFFFF
+    idx0 := ret & 0xFFFF
+    if (outside != 0 || idx0 = 0xFFFF) {
+        return 0
+    }
+    return idx0 + 1
+}
+
+MainPresetListIndexFromScreenPoint(ctrl, sx, sy) {
+    if !IsObject(ctrl) {
+        return 0
+    }
+    if (sx = "" || sy = "") {
+        return 0
+    }
+    pt := Buffer(8, 0)
+    NumPut("int", sx, pt, 0)
+    NumPut("int", sy, pt, 4)
+    DllCall("ScreenToClient", "ptr", ctrl.Hwnd, "ptr", pt)
+    cx := NumGet(pt, 0, "int")
+    cy := NumGet(pt, 4, "int")
+    return MainPresetListIndexFromClientPoint(ctrl, cx, cy)
+}
+
+MainPresetListIndexFromCursor(ctrl) {
+    if !IsObject(ctrl) {
+        return 0
+    }
+    pt := Buffer(8, 0)
+    if !DllCall("GetCursorPos", "ptr", pt) {
+        return 0
+    }
+    sx := NumGet(pt, 0, "int")
+    sy := NumGet(pt, 4, "int")
+    return MainPresetListIndexFromScreenPoint(ctrl, sx, sy)
+}
+
+MainMovePresetOrder(fromIndex, toIndex) {
+    if (fromIndex <= 0 || toIndex <= 0 || fromIndex = toIndex) {
+        return
+    }
+    presetList := LoadAllPreset()
+    newIndex := MainMoveArrayItemInPlace(presetList, fromIndex, toIndex)
+    if (newIndex <= 0) {
+        return
+    }
+    movingName := presetList[newIndex]
+    SavePresetOrder(presetList)
+    SetNowSelectPreset(movingName)
+    MainLoadAllPreset()
+}
+
+MainMoveArrayItemInPlace(arr, fromIndex, toIndex) {
+    if !IsObject(arr) {
+        return 0
+    }
+    if (fromIndex <= 0 || toIndex <= 0 || fromIndex > arr.Length || toIndex > arr.Length) {
+        return 0
+    }
+    if (fromIndex = toIndex) {
+        return fromIndex
+    }
+    movingName := arr[fromIndex]
+    arr.RemoveAt(fromIndex)
+    ; 预览/拖放语义：鼠标指到哪一项就放到哪一项（不做下移减一修正）
+    if (toIndex < 1) {
+        toIndex := 1
+    } else if (toIndex > arr.Length + 1) {
+        toIndex := arr.Length + 1
+    }
+    arr.InsertAt(toIndex, movingName)
+    return toIndex
+}
+
+MainPresetListOnLButtonDown(wParam, lParam, msg, hwnd) {
+    global gPresetDragStartIndex, gPresetDragHoverIndex, gPresetDragDown, gPresetDragPreviewing
+    global gPresetDragPreviewList, gPresetDragCurrentFromIndex, gPresetDragItemName
+    presetCtrl := MainGetCtrl("Preset")
+    if !IsObject(presetCtrl) || hwnd != presetCtrl.Hwnd {
+        return
+    }
+    x := lParam & 0xFFFF
+    y := (lParam >> 16) & 0xFFFF
+    gPresetDragStartIndex := MainPresetListIndexFromClientPoint(presetCtrl, x, y)
+    gPresetDragHoverIndex := gPresetDragStartIndex
+    gPresetDragDown := (gPresetDragStartIndex > 0)
+    gPresetDragPreviewing := false
+    gPresetDragPreviewList := []
+    gPresetDragCurrentFromIndex := gPresetDragStartIndex
+    gPresetDragItemName := ""
+    if gPresetDragDown {
+        gPresetDragPreviewList := LoadAllPreset()
+        if (gPresetDragStartIndex <= gPresetDragPreviewList.Length) {
+            gPresetDragItemName := gPresetDragPreviewList[gPresetDragStartIndex]
+        }
+    }
+}
+
+MainPresetListOnLButtonUp(wParam, lParam, msg, hwnd) {
+    global gPresetDragStartIndex, gPresetDragHoverIndex, gPresetDragDown, gPresetDragPreviewing
+    global gPresetDragPreviewList, gPresetDragCurrentFromIndex, gPresetDragItemName, gPresetSuppressChange
+    presetCtrl := MainGetCtrl("Preset")
+    if !IsObject(presetCtrl) || hwnd != presetCtrl.Hwnd {
+        return
+    }
+    previewing := gPresetDragPreviewing
+    movedName := gPresetDragItemName
+    previewList := gPresetDragPreviewList
+    gPresetDragStartIndex := 0
+    gPresetDragHoverIndex := 0
+    gPresetDragDown := false
+    gPresetDragPreviewing := false
+    gPresetDragPreviewList := []
+    gPresetDragCurrentFromIndex := 0
+    gPresetDragItemName := ""
+    if !previewing {
+        return
+    }
+    SavePresetOrder(previewList)
+    if (movedName != "") {
+        SetNowSelectPreset(movedName)
+    }
+    gPresetSuppressChange := true
+    MainLoadAllPreset()
+    gPresetSuppressChange := false
+}
+
+MainPresetListOnMouseMove(wParam, lParam, msg, hwnd) {
+    global gPresetDragStartIndex, gPresetDragHoverIndex, gPresetDragDown, gPresetDragPreviewing, gPresetSuppressChange
+    global gPresetDragPreviewList, gPresetDragCurrentFromIndex
+    if !gPresetDragDown {
+        return
+    }
+    presetCtrl := MainGetCtrl("Preset")
+    if !IsObject(presetCtrl) || hwnd != presetCtrl.Hwnd {
+        return
+    }
+    if (gPresetDragStartIndex <= 0) {
+        return
+    }
+    x := lParam & 0xFFFF
+    y := (lParam >> 16) & 0xFFFF
+    hoverIndex := MainPresetListIndexFromClientPoint(presetCtrl, x, y)
+    if (hoverIndex <= 0) {
+        return
+    }
+    if !IsObject(gPresetDragPreviewList) || gPresetDragPreviewList.Length = 0 {
+        return
+    }
+    fromIndex := gPresetDragCurrentFromIndex
+    if (fromIndex <= 0 || fromIndex > gPresetDragPreviewList.Length) {
+        return
+    }
+    if (hoverIndex > gPresetDragPreviewList.Length || hoverIndex = fromIndex) {
+        return
+    }
+    gPresetDragPreviewing := true
+    gPresetDragHoverIndex := hoverIndex
+    newIndex := MainMoveArrayItemInPlace(gPresetDragPreviewList, fromIndex, hoverIndex)
+    if (newIndex <= 0) {
+        return
+    }
+    gPresetDragCurrentFromIndex := newIndex
+    ; 拖拽过程中预览“换序后的完整结果”，松开后再真正保存
+    gPresetSuppressChange := true
+    MainSetListBoxFromArray(presetCtrl, gPresetDragPreviewList)
+    try presetCtrl.Choose(newIndex)
+    gPresetSuppressChange := false
 }

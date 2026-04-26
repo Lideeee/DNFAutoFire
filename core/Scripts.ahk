@@ -205,6 +205,9 @@ StartEx(){
     if MainCheckboxOn("AutoRun") {
         _AutoFireThreads.Push(SubProcessThread("ExAutoRun"))
     }
+    if MainCheckboxOn("Combo") {
+        _AutoFireThreads.Push(SubProcessThread("ExCombo"))
+    }
 }
 
 ; 停止连发功能

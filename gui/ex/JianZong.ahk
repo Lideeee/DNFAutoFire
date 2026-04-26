@@ -57,11 +57,24 @@ JianZongSetSkillKey(*) {
 }
 
 JianZongSaveConfig() {
+    delay := Round((Trim(JianZongGetCtrl("JianZongDelay").Text) = "" ? 200 : JianZongGetCtrl("JianZongDelay").Text) + 0)
+    if (delay < 20) {
+        delay := 20
+    } else if (delay > 3000) {
+        delay := 3000
+    }
+    JianZongGetCtrl("JianZongDelay").Text := delay
     SavePreset(GetNowSelectPreset(), "JianZongSkillKey", JianZongGetCtrl("JianZongSkillKey").Text)
-    SavePreset(GetNowSelectPreset(), "JianZongDelay", JianZongGetCtrl("JianZongDelay").Text)
+    SavePreset(GetNowSelectPreset(), "JianZongDelay", delay)
 }
 
 JianZongLoadConfig() {
     JianZongGetCtrl("JianZongSkillKey").Text := LoadPreset(GetNowSelectPreset(), "JianZongSkillKey", "A")
-    JianZongGetCtrl("JianZongDelay").Text := LoadPreset(GetNowSelectPreset(), "JianZongDelay", "200")
+    delay := Round(LoadPreset(GetNowSelectPreset(), "JianZongDelay", 200) + 0)
+    if (delay < 20) {
+        delay := 20
+    } else if (delay > 3000) {
+        delay := 3000
+    }
+    JianZongGetCtrl("JianZongDelay").Text := delay
 }
