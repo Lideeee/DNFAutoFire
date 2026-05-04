@@ -1,5 +1,4 @@
 AutoFire(key){
-    ProcessSetPriority("High")
     keyCode := Key2NoVkSC(key)
     pressKey := Key2PressKey(key)
     loop {

@@ -10,19 +10,21 @@ global __AutoRunLeftPulseSend := "{Left Down}{Left Up}{Left Down}"
 global __AutoRunLeftUpSend := "{Left Up}"
 
 ExAutoRun(){
-    ProcessSetPriority("High")
+    global __AutoRunRightPulseSend, __AutoRunRightUpSend, __AutoRunLeftPulseSend, __AutoRunLeftUpSend
+    global __AutoRunPressingRight, __AutoRunDoubleRight, __AutoRunRightCounter
+    global __AutoRunPressingLeft, __AutoRunDoubleLeft, __AutoRunLeftCounter
     SetStoreCapsLockMode(false)
     SetDNFWindowClass()
     ; 子进程入口默认会 Suspend(true)，自动奔跑依赖热键回调，需显式恢复
     Suspend(false)
-    presetName := LoadLastPreset()
-    leftKey := LoadPreset(presetName, "AutoRunLeftKey", "Left")
-    rightKey := LoadPreset(presetName, "AutoRunRightKey", "Right")
-    if (leftKey = "") {
-        leftKey := "Left"
+    presetName := LoadLastPresetTrimmed()
+    if (presetName = "") {
+        return
     }
-    if (rightKey = "") {
-        rightKey := "Right"
+    leftKey := LoadPresetSafe(presetName, "AutoRunLeftKey")
+    rightKey := LoadPresetSafe(presetName, "AutoRunRightKey")
+    if (leftKey = "" || rightKey = "") {
+        return
     }
     __AutoRunRightPulseSend := "{" rightKey " Down}{" rightKey " Up}{" rightKey " Down}"
     __AutoRunRightUpSend := "{" rightKey " Up}"

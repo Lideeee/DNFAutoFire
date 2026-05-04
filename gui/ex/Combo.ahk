@@ -62,7 +62,7 @@ ComboGuiClose(*) {
 }
 
 ComboHelp(*) {
-    MsgBox("1、添加技能默认延迟 20ms`n2、双击列表项可修改技能键和延迟`n3、拖动列表可调整连招顺序`n4、设置触发键并保存`n`n循环开启：按住触发键会持续循环连招`n循环关闭：每次按下只执行一轮连招", "一键连招说明", "Iconi")
+    MsgBox("1、添加技能默认延迟 20ms`n2、双击列表项可修改技能键和延迟`n3、拖动列表可调整连招顺序`n4、设置触发键并保存（未设置触发键时连招不生效）`n`n循环开启：按住触发键会持续循环连招`n循环关闭：每次按下只执行一轮连招", "一键连招说明", "Iconi")
 }
 
 ComboNormalizeDelay(raw) {
@@ -185,10 +185,6 @@ ComboSave(*) {
 ComboSaveConfig() {
     global __ComboSkillItems
     triggerKey := ComboGetCtrl("ComboTriggerKey").Text
-    if (triggerKey = "") {
-        triggerKey := "X"
-        ComboGetCtrl("ComboTriggerKey").Text := triggerKey
-    }
     SavePreset(GetNowSelectPreset(), "ComboTriggerKey", triggerKey)
     SavePreset(GetNowSelectPreset(), "ComboLoopMode", ComboGetCtrl("ComboLoopMode").Value)
     SavePreset(GetNowSelectPreset(), "ComboSkills", ComboSerializeSkills(__ComboSkillItems))
@@ -198,7 +194,7 @@ ComboLoadConfig() {
     global __ComboSkillItems
     __ComboSkillItems := ComboParseSkills(LoadPreset(GetNowSelectPreset(), "ComboSkills", ""))
     ComboRefreshList()
-    ComboGetCtrl("ComboTriggerKey").Text := LoadPreset(GetNowSelectPreset(), "ComboTriggerKey", "X")
+    ComboGetCtrl("ComboTriggerKey").Text := LoadPreset(GetNowSelectPreset(), "ComboTriggerKey", "")
     ComboGetCtrl("ComboLoopMode").Value := LoadPreset(GetNowSelectPreset(), "ComboLoopMode", false)
 }
 
@@ -233,9 +229,6 @@ ComboShowEditDialog(item) {
 ComboEditChangeKey(*) {
     global gComboEditCtrls, gComboEditKey
     key := GetPressKey()
-    if (key = "") {
-        return
-    }
     gComboEditKey := key
     gComboEditCtrls["ComboEditCurrentKey"].Text := key
 }

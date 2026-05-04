@@ -53,6 +53,9 @@ LvRenHelp(*) {
 LvRenAddKey(*) {
     global __LvRenSkillKeys
     key := GetPressKey()
+    if (key = "") {
+        return
+    }
     if IsValueInArray(key, __LvRenSkillKeys) {
         MsgBox("请勿重复添加按键",, "Icon!")
     } else {

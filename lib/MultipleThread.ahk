@@ -31,9 +31,7 @@ class SubProcessThread
             k := "Key" k
         }
         try {
-            if (k = "ReleaseKeys") {
-                ReleaseKeys()
-            } else if (k = "ExLvRen") {
+            if (k = "ExLvRen") {
                 ExLvRen()
             } else if (k = "ExGuanYu") {
                 ExGuanYu()

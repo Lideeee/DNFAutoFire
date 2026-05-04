@@ -8,8 +8,8 @@
 ;@Ahk2Exe-SetCopyright 某亚瑟
 ;@Ahk2Exe-SetLanguage 0x0804
 ;@Ahk2Exe-SetProductName DAF连发工具
-;@Ahk2Exe-SetProductVersion 0.2.5
-;@Ahk2Exe-SetVersion 0.2.5
+;@Ahk2Exe-SetProductVersion 0.2.6
+;@Ahk2Exe-SetVersion 0.2.6
 
 ; 允许 SubProcessThread 启动并存子进程；Ignore 会把子进程直接拒绝掉
 #SingleInstance Off
@@ -21,7 +21,7 @@ if (A_Args.Length >= 1 && InStr(A_Args[1], "/Run=")) {
     A_IconHidden := true
 }
 
-global __Version := "0.2.5"
+global __Version := "0.2.6"
 
 #Include <RunWithAdministrator>
 #Include <MultipleThread>
@@ -35,7 +35,6 @@ global __Version := "0.2.5"
 EnsureConfigInitialized()
 #Include ./core/AutoFire.ahk
 #Include ./core/Scripts.ahk
-#Include ./core/ReleaseKeys.ahk
 #Include ./gui/Main.ahk
 #Include ./gui/QuickSwitch.ahk
 #Include ./gui/Setting.ahk

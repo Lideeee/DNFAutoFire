@@ -53,6 +53,9 @@ ZhanFaHelp(*) {
 ZhanFaAddKey(*) {
     global __ZhanFaSkillKeys
     key := GetPressKey()
+    if (key = "") {
+        return
+    }
     if IsValueInArray(key, __ZhanFaSkillKeys) {
         MsgBox("请勿重复添加按键",, "Icon!")
     } else {

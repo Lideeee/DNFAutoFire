@@ -1,9 +1,11 @@
 ExZhanFa(){
-    ProcessSetPriority("High")
     SetDNFWindowClass()
-    presetName := LoadLastPreset()
+    presetName := LoadLastPresetTrimmed()
+    if (presetName = "") {
+        return
+    }
     if(LoadPreset(presetName, "ZhanFaState", false)){
-        ShotKey := LoadPreset(presetName, "ZhanFaShotKey", "Space")
+        ShotKey := LoadPresetSafe(presetName, "ZhanFaShotKey")
         intervalMs := Round(LoadPreset(presetName, "MainAutoFireInterval", 20) + 0)
         if (intervalMs < 1) {
             intervalMs := 1
@@ -12,6 +14,9 @@ ExZhanFa(){
         }
         SkillKeys := ZhanFaLoadKeys(presetName)
         if (SkillKeys.Length = 0) {
+            return
+        }
+        if (ShotKey = "") {
             return
         }
         keyCode := Key2NoVkSC(ShotKey)
@@ -56,10 +61,11 @@ ExZhanFa(){
 
 ; 读取预设的连发按键
 ZhanFaLoadKeys(presetName){
-    skillKeysConfig := LoadPreset(presetName, "ZhanFaSkillKeys")
+    skillKeysConfig := LoadPresetSafe(presetName, "ZhanFaSkillKeys")
     keys := []
     for item in StrSplit(skillKeysConfig, "|")
     {
+        item := Trim(item)
         if (item != "") {
             keys.Push(item)
         }

@@ -55,6 +55,9 @@ GuanYuHelp(*) {
 GuanYuAddKey(*) {
     global __GuanYuSkillKeys
     key := GetPressKey()
+    if (key = "") {
+        return
+    }
     if IsValueInArray(key, __GuanYuSkillKeys) {
         MsgBox("请勿重复添加按键",, "Icon!")
     } else {

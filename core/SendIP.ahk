@@ -1,19 +1,22 @@
 SendIP(keyCode){
-    ; DNF 对“按下时长”较敏感：过短的 tap 可能被吞。
-    ; 这里保留 Down/Up，并用一个很短的按住时长（默认 8ms）提高识别率。
-    ; 同时避免长时间 Critical 抢占：只在发送瞬间 Critical。
-    holdMs := 8
-    try {
-        Critical("On")
-        SendInput("{Blind}{" keyCode " DownTemp}")
-        Critical("Off")
-
-        ; 在不占用 Critical 的情况下维持短按住
-        DllCall("Sleep", "UInt", holdMs)
-
-        Critical("On")
-        SendInput("{Blind}{" keyCode " Up}")
-    } finally {
-        Critical("Off")
-    }
+    ; 强行接管发送节奏，不让任何按键插队
+    Critical("On")
+    
+    ; 强制使用 SendEvent，保护键盘钩子绝对不掉线
+    ; 第一个 -1：取消 AHK 默认的按键间延迟
+    ; 第二个 -1：取消 AHK 默认的按下时长（由下方的 Sleep 亲自精准接管）
+    SetKeyDelay(-1, -1)
+    
+    SendEvent("{Blind}{" keyCode " DownTemp}")
+    
+    ; 保持 8ms 的按下时间，让 DNF 引擎稳定抓取“按下”指令
+    DllCall("Sleep", "UInt", 8)
+    
+    SendEvent("{Blind}{" keyCode " Up}")
+    
+    ; 【核心救命点】：强制给出 2ms 的“呼吸缓冲期”
+    ; 确保当前按键彻底抬起、且被 DNF 接收后，下一个排队的按键才能执行 Down
+    DllCall("Sleep", "UInt", 2)
+    
+    Critical("Off")
 }

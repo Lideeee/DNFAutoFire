@@ -41,6 +41,22 @@ MainGetCtrl(name) {
     return gMainCtrls.Has(name) ? gMainCtrls[name] : ""
 }
 
+; 不参与连发开关、固定灰色（与 Win 键一致，+Disabled）
+MainKeyUiGrayOnly(name) {
+    static gray := Map(
+        "Esc", true,
+        "Tab", true,
+        "Caps", true,
+        "LShift", true,
+        "RShift", true,
+        "LCtrl", true,
+        "RCtrl", true,
+        "LAlt", true,
+        "RAlt", true,
+    )
+    return gray.Has(name)
+}
+
 ; 主界面「其他功能」复选框是否勾选（供 core/Scripts.ahk 等使用，避免 v1 式未赋值全局变量触发 #Warn）
 MainCheckboxOn(name) {
     c := MainGetCtrl(name)
@@ -64,9 +80,14 @@ for item in [
 ] {
     name := item[1], pos := item[2], label := item.Length >= 3 ? item[3] : name
     fontSize := (name = "PrtSc" || name = "ScrLk" || name = "Pause" || name = "NumEnter" || name = "NumLk") ? "s7" : ((name ~= "^(Ins|Home|PgUp|Del|End|PgDn|Num[1-9])$") ? "s9" : "s12")
-    gMainGui.SetFont(fontSize " cBlue")
-    ctrl := MainAdd("Text", "v" name " " pos " +0x200 +0x400000 +Center", label)
-    ctrl.OnEvent("Click", MainKeyClick)
+    if MainKeyUiGrayOnly(name) {
+        gMainGui.SetFont(fontSize)
+        ctrl := MainAdd("Text", "v" name " " pos " +0x200 +0x400000 +Center +Disabled", label)
+    } else {
+        gMainGui.SetFont(fontSize " cBlue")
+        ctrl := MainAdd("Text", "v" name " " pos " +0x200 +0x400000 +Center", label)
+        ctrl.OnEvent("Click", MainKeyClick)
+    }
 }
 gMainGui.SetFont()
 
@@ -111,7 +132,7 @@ MainAdd("CheckBox", "vAutoRun x364 y420 h20 w16").OnEvent("Click", MainSaveExTog
 MainAdd("Link", "vMainAutoRun x382 y423 h20", "<a>自动奔跑</a>").OnEvent("Click", MainAutoRun)
 MainAdd("CheckBox", "vCombo x364 y440 h20 w16").OnEvent("Click", MainSaveExToggle)
 MainAdd("Link", "vMainCombo x382 y443 h20", "<a>一键连招</a>").OnEvent("Click", MainCombo)
-gMainGui.Add("Text", "x364 y474 w170 h20 +0x200", "当前版本: v" __Version)
+gMainGui.Add("Text", "x364 y474 w280 h20 +0x200", "当前版本: v" __Version "（原作者：某亚瑟）")
 
 gPresetContextMenu.Add("新建配置", MainCreatePreset)
 gPresetContextMenu.Add("重命名配置", MainRenamePreset)
@@ -148,11 +169,14 @@ DisableGuiMain() {
 EnableGuiMain() {
     global gMainGui
     gMainGui.Opt("-Disabled")
-    gMainGui.Title := "DAF连发工具 - DNF AutoFire - v" __Version
+    gMainGui.Title := "DAF连发工具 - DNF AutoFire - v" __Version "（原作者：某亚瑟）"
     gMainGui.Show("w940 h510")
 }
 
 MainSetKeyState(key, state) {
+    if MainKeyUiGrayOnly(key) {
+        return
+    }
     ctrl := MainGetCtrl(key)
     if !IsObject(ctrl) {
         return
@@ -555,7 +579,7 @@ MainInitPreset(name) {
     SavePreset(name, "AutoRunState", false)
     SavePreset(name, "ComboState", false)
     SavePreset(name, "MainAutoFireInterval", 20)
-    SavePreset(name, "ComboTriggerKey", "X")
+    SavePreset(name, "ComboTriggerKey", "")
     SavePreset(name, "ComboLoopMode", false)
     SavePreset(name, "ComboSkills", "")
 }

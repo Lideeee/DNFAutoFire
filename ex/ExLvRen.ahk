@@ -1,9 +1,11 @@
 ExLvRen(){
-    ProcessSetPriority("High")
     SetDNFWindowClass()
-    presetName := LoadLastPreset()
+    presetName := LoadLastPresetTrimmed()
+    if (presetName = "") {
+        return
+    }
     if(LoadPreset(presetName, "LvRenState", false)){
-        ShotKey := LoadPreset(presetName, "LvRenShotKey", "Z")
+        ShotKey := LoadPresetSafe(presetName, "LvRenShotKey")
         intervalMs := Round(LoadPreset(presetName, "MainAutoFireInterval", 20) + 0)
         if (intervalMs < 1) {
             intervalMs := 1
@@ -12,6 +14,9 @@ ExLvRen(){
         }
         SkillKeys := LvRenLoadKeys(presetName)
         if (SkillKeys.Length = 0) {
+            return
+        }
+        if (ShotKey = "") {
             return
         }
         keyCode := Key2NoVkSC(ShotKey)
@@ -56,10 +61,11 @@ ExLvRen(){
 
 ; 读取预设的连发按键
 LvRenLoadKeys(presetName){
-    skillKeysConfig := LoadPreset(presetName, "LvRenSkillKeys")
+    skillKeysConfig := LoadPresetSafe(presetName, "LvRenSkillKeys")
     keys := []
     for item in StrSplit(skillKeysConfig, "|")
     {
+        item := Trim(item)
         if (item != "") {
             keys.Push(item)
         }

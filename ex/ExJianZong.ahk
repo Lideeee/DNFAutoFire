@@ -1,9 +1,11 @@
 ExJianZong(){
-    ProcessSetPriority("High")
     SetDNFWindowClass()
-    presetName := LoadLastPreset()
+    presetName := LoadLastPresetTrimmed()
+    if (presetName = "") {
+        return
+    }
     if(LoadPreset(presetName, "JianZongState", false)){
-        skillKey := LoadPreset(presetName, "JianZongSkillKey", "A")
+        skillKey := LoadPresetSafe(presetName, "JianZongSkillKey")
         delay := Round(LoadPreset(presetName, "JianZongDelay", 200) + 0)
         if (delay < 20) {
             delay := 20

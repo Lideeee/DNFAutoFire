@@ -176,7 +176,6 @@ StartAutoFire(){
         SetTimer(fn, intervalMs)
     }
     Sleep(10)
-    _AutoFireThreads.Push(SubProcessThread("ReleaseKeys"))
     StartEx()
     SetTrayRunningIcon(true)
     nowSelectPreset := GetNowSelectPreset()

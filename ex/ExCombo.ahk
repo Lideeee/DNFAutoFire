@@ -1,14 +1,16 @@
 ExCombo() {
-    ProcessSetPriority("High")
     SetDNFWindowClass()
-    presetName := LoadLastPreset()
+    presetName := LoadLastPresetTrimmed()
+    if (presetName = "") {
+        return
+    }
     if !LoadPreset(presetName, "ComboState", false) {
         return
     }
 
-    triggerKey := LoadPreset(presetName, "ComboTriggerKey", "X")
+    triggerKey := LoadPresetSafe(presetName, "ComboTriggerKey")
     if (triggerKey = "") {
-        triggerKey := "X"
+        return
     }
     loopMode := LoadPreset(presetName, "ComboLoopMode", false)
     comboSkills := ExComboLoadSkills(presetName)
@@ -70,7 +72,7 @@ ExComboRunOnce(comboSkills, triggerPressKey, breakOnRelease) {
 
 ExComboLoadSkills(presetName) {
     items := []
-    raw := LoadPreset(presetName, "ComboSkills", "")
+    raw := LoadPresetSafe(presetName, "ComboSkills")
     for unit in StrSplit(raw, "|") {
         unit := Trim(unit)
         if (unit = "") {

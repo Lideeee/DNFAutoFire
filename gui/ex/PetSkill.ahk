@@ -47,12 +47,15 @@ PetSkillGuiClose(*) {
 }
 
 PetSkillHelp(*) {
-    MsgBox("1、添加你想触发宠物技能时按下的技能键`n2、设置游戏中的宠物技能键（默认Z）`n3、保存配置，启动连发并使用", "如何使用自动宠物技能", "Iconi")
+    MsgBox("1、添加你想触发宠物技能时按下的技能键`n2、设置游戏中的宠物技能键（默认V）`n3、保存配置，启动连发并使用", "如何使用自动宠物技能", "Iconi")
 }
 
 PetSkillAddKey(*) {
     global __PetSkillSkillKeys
     key := GetPressKey()
+    if (key = "") {
+        return
+    }
     if IsValueInArray(key, __PetSkillSkillKeys) {
         MsgBox("请勿重复添加按键",, "Icon!")
     } else {
@@ -132,7 +135,7 @@ PetSkillSaveConfig() {
 
 PetSkillLoadConfig() {
     global __PetSkillSkillKeys
-    shotKey := LoadPreset(GetNowSelectPreset(), "PetSkillShotKey", "Z")
+    shotKey := LoadPreset(GetNowSelectPreset(), "PetSkillShotKey", "V")
     __PetSkillSkillKeys := PetSkillLoadKeys(GetNowSelectPreset())
     PetSkillChangeListGui(__PetSkillSkillKeys)
     PetSkillGetCtrl("PetSkillShotKey").Text := shotKey

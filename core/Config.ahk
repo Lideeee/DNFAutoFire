@@ -34,6 +34,15 @@ LoadPreset(presetsName, type, default := ""){
     return IniRead(ConfigIniPath(), "预设:" presetsName, type, default)
 }
 
+; 字符串型预设项安全读取：Trim 节名与值；缺失/空/仅空白均返回空串，不把空白当成默认值（布尔/数值仍用 LoadPreset）
+LoadPresetSafe(presetsName, type) {
+    presetsName := Trim(presetsName)
+    if (presetsName = "") {
+        return ""
+    }
+    return Trim(LoadPreset(presetsName, type, ""))
+}
+
 ; 删除预设
 DeletePreset(presetsName){
     presetsName := StrReplace(presetsName, "`|")
@@ -184,7 +193,7 @@ _CreateDefaultConfigIni() {
     SavePreset(DEFAULT_PRESET_NAME, "MainAutoFireInterval", 20)
     SavePreset(DEFAULT_PRESET_NAME, "AutoRunLeftKey", "Left")
     SavePreset(DEFAULT_PRESET_NAME, "AutoRunRightKey", "Right")
-    SavePreset(DEFAULT_PRESET_NAME, "ComboTriggerKey", "X")
+    SavePreset(DEFAULT_PRESET_NAME, "ComboTriggerKey", "")
     SavePreset(DEFAULT_PRESET_NAME, "ComboLoopMode", false)
     SavePreset(DEFAULT_PRESET_NAME, "ComboSkills", "")
 }
@@ -213,6 +222,11 @@ SaveLastPreset(presetName){
 ; 读取上次的预设
 LoadLastPreset(){
     return LoadConfig("LastPreset")
+}
+
+; 读取上次预设名（已 Trim；未配置或占位时可能为空，不宜直接用于节名）
+LoadLastPresetTrimmed() {
+    return Trim(LoadLastPreset())
 }
 
 ; 克隆配置

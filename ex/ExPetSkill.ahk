@@ -1,11 +1,16 @@
 ExPetSkill(){
-    ProcessSetPriority("High")
     SetDNFWindowClass()
-    presetName := LoadLastPreset()
+    presetName := LoadLastPresetTrimmed()
+    if (presetName = "") {
+        return
+    }
     if(LoadPreset(presetName, "PetSkillState", false)){
-        ShotKey := LoadPreset(presetName, "PetSkillShotKey", "Z")
+        ShotKey := LoadPresetSafe(presetName, "PetSkillShotKey")
         SkillKeys := PetSkillLoadKeys(presetName)
         if (SkillKeys.Length = 0) {
+            return
+        }
+        if (ShotKey = "") {
             return
         }
         keyCode := Key2NoVkSC(ShotKey)
@@ -47,10 +52,11 @@ ExPetSkill(){
 
 ; 读取预设的触发按键
 PetSkillLoadKeys(presetName){
-    skillKeysConfig := LoadPreset(presetName, "PetSkillSkillKeys")
+    skillKeysConfig := LoadPresetSafe(presetName, "PetSkillSkillKeys")
     keys := []
     for item in StrSplit(skillKeysConfig, "|")
     {
+        item := Trim(item)
         if (item != "") {
             keys.Push(item)
         }

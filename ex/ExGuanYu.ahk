@@ -1,9 +1,11 @@
 ExGuanYu(){
-    ProcessSetPriority("High")
     SetDNFWindowClass()
-    presetName := LoadLastPreset()
+    presetName := LoadLastPresetTrimmed()
+    if (presetName = "") {
+        return
+    }
     if(LoadPreset(presetName, "GuanYuState", false)){
-        shotKey := LoadPreset(presetName, "GuanYuShotKey", "Space")
+        shotKey := LoadPresetSafe(presetName, "GuanYuShotKey")
         delayMs := Round(LoadPreset(presetName, "GuanYuDelay", 300) + 0)
         if (delayMs < 20) {
             delayMs := 20
@@ -12,6 +14,9 @@ ExGuanYu(){
         }
         skillKeys := GuanYuLoadKeys(presetName)
         if (skillKeys.Length = 0) {
+            return
+        }
+        if (shotKey = "") {
             return
         }
         keyCode := Key2NoVkSC(shotKey)
@@ -63,10 +68,11 @@ ExGuanYu(){
 }
 
 GuanYuLoadKeys(presetName){
-    skillKeysConfig := LoadPreset(presetName, "GuanYuSkillKeys")
+    skillKeysConfig := LoadPresetSafe(presetName, "GuanYuSkillKeys")
     keys := []
     for item in StrSplit(skillKeysConfig, "|")
     {
+        item := Trim(item)
         if (item != "") {
             keys.Push(item)
         }
