@@ -243,6 +243,7 @@ StopAutoFire(){
         try RestoreSystemTimeLimit()
         _AutoFireTimeUnlocked := false
     }
+    try PresetRecognition_CancelPending()
 }
 
 ; 单进程多定时器：每个键独立 tick，避免多个键串行争用
@@ -323,6 +324,36 @@ ChangePreset(presetName){
     MainLoadEx()
 }
 
+; 连发是否处于运行中（有定时器或扩展子进程）
+AutoFireIsRunning() {
+    global _AutoFireSingleProcessTimers, _AutoFireThreads
+    try tc := _AutoFireSingleProcessTimers.Length
+    catch {
+        tc := 0
+    }
+    try th := _AutoFireThreads.Length
+    catch {
+        th := 0
+    }
+    return tc > 0 || th > 0
+}
+
+; 切换预设并在此前连发已启动时自动恢复连发（用于识别快捷键等）
+ChangePresetAndResumeAutoFire(presetName) {
+    presetName := Trim(presetName)
+    if (presetName = "") {
+        return
+    }
+    if (presetName = GetNowSelectPreset()) {
+        return
+    }
+    was := AutoFireIsRunning()
+    ChangePreset(presetName)
+    if was {
+        StartAutoFire()
+    }
+}
+
 ; 判断数组中是否存在某值
 IsValueInArray(value, array){
     if !IsObject(array) {
@@ -367,9 +398,9 @@ DeleteValueInArray(value, array){
     }
 }
 
-ShowTip(text){
+ShowTip(text, holdMs := 3000) {
     ToolTip(text)
-    SetTimer(CloseTip, -3000)
+    SetTimer(CloseTip, -holdMs)
     ; 只尝试激活标题匹配，避免把标题当成 ahk_class
     try WinActivate("地下城与勇士")
 }

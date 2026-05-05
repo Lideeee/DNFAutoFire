@@ -96,7 +96,8 @@ gMainGui.Add("Text", "x454 y240 w48 h36 +0x200 +0x400000 +Center +Disabled", "Fn
 gMainGui.Add("Text", "x506 y240 w48 h36 +0x200 +0x400000 +Center +Disabled", "App")
 
 gMainGui.SetFont("s9")
-MainAdd("Button", "vMainClear x848 y30 w78 h36 +0x200 +Center", "清空键位").OnEvent("Click", MainClear)
+MainAdd("Text", "vMainVersionText x770 y30 w112 h42", "版本信息：`nv" __Version "`n原作者：某亚瑟")
+MainAdd("Button", "vMainClear x890 y30 w36 h36 +0x200 +Center", "清空").OnEvent("Click", MainClear)
 gMainGui.SetFont()
 
 gMainGui.Add("GroupBox", "x8 y300 w340 h200", "配置设置 - [ 单击切换配置，右键配置列表管理 ]")
@@ -117,7 +118,8 @@ MainAdd("Button", "vMainSetting x838 y305 w96 h60", "软件设置").OnEvent("Cli
 MainAdd("Button", "vMainCheckUpdate x838 y372 w96 h60", "检查更新").OnEvent("Click", MainCheckUpdate)
 MainAdd("Button", "vMainStart x838 y440 w96 h60", "启动连发").OnEvent("Click", MainStart)
 
-gMainGui.Add("GroupBox", "x356 y300 w472 h200", "其他功能")
+; 右缘与按钮左缘间距 8px，与左侧 GroupBox 到窗口左缘间距一致（按钮 x838）
+gMainGui.Add("GroupBox", "x356 y300 w474 h200", "其他功能")
 MainAdd("CheckBox", "vLvRen x364 y320 h20 w16").OnEvent("Click", MainSaveExToggle)
 MainAdd("Link", "vMainLvRen x382 y323 h20", "<a>旅人自动流星</a>").OnEvent("Click", MainLvRen)
 MainAdd("CheckBox", "vGuanYu x364 y340 h20 w16").OnEvent("Click", MainSaveExToggle)
@@ -132,7 +134,7 @@ MainAdd("CheckBox", "vAutoRun x364 y420 h20 w16").OnEvent("Click", MainSaveExTog
 MainAdd("Link", "vMainAutoRun x382 y423 h20", "<a>自动奔跑</a>").OnEvent("Click", MainAutoRun)
 MainAdd("CheckBox", "vCombo x364 y440 h20 w16").OnEvent("Click", MainSaveExToggle)
 MainAdd("Link", "vMainCombo x382 y443 h20", "<a>一键连招</a>").OnEvent("Click", MainCombo)
-gMainGui.Add("Text", "x364 y474 w280 h20 +0x200", "当前版本: v" __Version "（原作者：某亚瑟）")
+MainAdd("Link", "vMainPresetSkill x364 y480 w400 h18", "<a>自动识别配置（需在软件设置中开启自动识别）</a>").OnEvent("Click", MainPresetSkill)
 
 gPresetContextMenu.Add("新建配置", MainCreatePreset)
 gPresetContextMenu.Add("重命名配置", MainRenamePreset)
@@ -142,6 +144,7 @@ gPresetBlankContextMenu.Add("新建配置", MainCreatePreset)
 
 ShowGuiMain(*) {
     global gMainGui
+    try PresetRecognition_CancelPending()
     gMainGui.Title := "DAF连发工具 - DNF AutoFire"
     gMainGui.Show("w940 h510")
     MainLoadAllPreset()
@@ -150,6 +153,7 @@ ShowGuiMain(*) {
 
 HideGuiMain(*) {
     global gMainGui
+    try PresetRecognition_CancelPending()
     gMainGui.Hide()
 }
 
@@ -170,7 +174,7 @@ EnableGuiMain() {
     global gMainGui
     gMainGui.Opt("-Disabled")
     gMainGui.Title := "DAF连发工具 - DNF AutoFire - v" __Version "（原作者：某亚瑟）"
-    gMainGui.Show("w940 h510")
+    gMainGui.Show("w940 h518")
 }
 
 MainSetKeyState(key, state) {
@@ -200,6 +204,7 @@ MainKeyClick(ctrl, *) {
 MainStart(*) {
     HideGuiMain()
     StartAutoFire()
+    try PresetRecognition_StartSequence()
 }
 
 MainClear(*) {
@@ -224,6 +229,7 @@ MainClonePreset(*) {
     }
     config := IniRead(ConfigIniPath(), "预设:" oldName)
     IniWrite(config, ConfigIniPath(), "预设:" newName)
+    PresetSkillIcon_CopyForPreset(oldName, newName)
     presetList := LoadAllPreset()
     if !IsValueInArray(newName, presetList) {
         presetList.Push(newName)
@@ -247,6 +253,7 @@ MainDeletePreset(*) {
     if (ret != "Yes") {
         return
     }
+    PresetSkillIcon_DeleteForPreset(presetName)
     DeletePreset(presetName)
     presetList := LoadAllPreset()
     DeleteValueInArray(presetName, presetList)
@@ -341,6 +348,10 @@ MainLoadAllPreset() {
 
 MainSetting(*) {
     ShowGuiSetting()
+}
+
+MainOpenSettingAbout(*) {
+    ShowGuiSettingAbout()
 }
 
 MainCheckUpdate(*) {

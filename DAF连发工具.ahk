@@ -8,8 +8,8 @@
 ;@Ahk2Exe-SetCopyright 某亚瑟
 ;@Ahk2Exe-SetLanguage 0x0804
 ;@Ahk2Exe-SetProductName DAF连发工具
-;@Ahk2Exe-SetProductVersion 0.2.6
-;@Ahk2Exe-SetVersion 0.2.6
+;@Ahk2Exe-SetProductVersion 0.2.7
+;@Ahk2Exe-SetVersion 0.2.7
 
 ; 允许 SubProcessThread 启动并存子进程；Ignore 会把子进程直接拒绝掉
 #SingleInstance Off
@@ -21,7 +21,7 @@ if (A_Args.Length >= 1 && InStr(A_Args[1], "/Run=")) {
     A_IconHidden := true
 }
 
-global __Version := "0.2.6"
+global __Version := "0.2.7"
 
 #Include <RunWithAdministrator>
 #Include <MultipleThread>
@@ -35,6 +35,7 @@ global __Version := "0.2.6"
 EnsureConfigInitialized()
 #Include ./core/AutoFire.ahk
 #Include ./core/Scripts.ahk
+#Include ./core/PresetRecognition.ahk
 #Include ./gui/Main.ahk
 #Include ./gui/QuickSwitch.ahk
 #Include ./gui/Setting.ahk
@@ -52,6 +53,8 @@ EnsureConfigInitialized()
 #Include ./ex/ExAutoRun.ahk
 #Include .\gui\ex\Combo.ahk
 #Include .\ex\ExCombo.ahk
+#Include ./gui/PresetAutoSwitch.ahk
+#Include ./gui/ex/PresetSkillIcon.ahk
 
 ; 必须放在所有 #Include 之后：子进程 /Run=XXX 需要先看到 Keys.ahk 等函数定义
 SubProcessThread.ScriptStart()
@@ -79,6 +82,7 @@ Exit(*) {
 ; 确保退出时停止连发并恢复系统计时精度（timeBeginPeriod）
 OnExit(CleanupOnExit)
 CleanupOnExit(*) {
+    try PresetRecognition_DisableAllHotkeys()
     try StopAutoFire()
 }
 
@@ -87,9 +91,12 @@ global _AutoFireEnableKeys := []
 global _AutoFireSingleProcessTimers := []
 global _NowSelectPreset := LoadLastPreset()
 
+PresetRecognition_UpdateHotkeys()
+
 ShowGuiMain()
 SetDNFWindowClass()
 if (_AutoStart) {
     HideGuiMain()
     StartAutoFire()
+    try PresetRecognition_StartSequence()
 }
