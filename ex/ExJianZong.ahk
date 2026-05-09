@@ -4,10 +4,16 @@ global _JianZongShotKeyCode := ""
 global _JianZongPressKey := ""
 global _JianZongDelayMs := 200
 global _JianZongHoldStartTick := 0
+global _JianZongHotkeySub := 0
 
 JianZongUnregisterHotkeys() {
     SetTimer(JianZongTick, 0)
-    global _JianZongPressKey, _JianZongHoldStartTick
+    global _JianZongPressKey, _JianZongHoldStartTick, _JianZongHotkeySub
+    if IsObject(_JianZongHotkeySub) {
+        KeyRouter.UnsubscribeDown(_JianZongHotkeySub.id, _JianZongHotkeySub.downFn)
+        KeyRouter.UnsubscribeUp(_JianZongHotkeySub.id, _JianZongHotkeySub.upFn)
+    }
+    _JianZongHotkeySub := 0
     _JianZongPressKey := ""
     _JianZongHoldStartTick := 0
 }
@@ -15,7 +21,7 @@ JianZongUnregisterHotkeys() {
 JianZongRegisterHotkeys() {
     global _JianZongShotKeyCode, _JianZongPressKey, _JianZongDelayMs
     JianZongUnregisterHotkeys()
-    if !MainCheckboxOn("JianZong") {
+    if !PresetExFeatures.IsOn("JianZong") {
         return
     }
     presetName := GetNowSelectPreset()
@@ -25,7 +31,7 @@ JianZongRegisterHotkeys() {
     if !LoadPreset(presetName, "JianZongState", false) {
         return
     }
-    skillKey := LoadPresetSafe(presetName, "JianZongSkillKey")
+    skillKey := GetKeycode.CanonMainKey(LoadPresetSafe(presetName, "JianZongSkillKey"))
     if (skillKey = "") {
         return
     }
@@ -35,13 +41,25 @@ JianZongRegisterHotkeys() {
     } else if (delay > 3000) {
         delay := 3000
     }
-    _JianZongShotKeyCode := Key2NoVkSC(skillKey)
-    _JianZongPressKey := Key2PressKey(skillKey)
+    _JianZongShotKeyCode := GetKeycode.ToSendToken(skillKey)
+    if (_JianZongShotKeyCode = "") {
+        return
+    }
+    _JianZongPressKey := GetKeycode.ToProbeKey(skillKey)
     _JianZongDelayMs := delay
 
-    id := AutoFireMainHotkeyIdFromOrigin(skillKey)
-    KeyRouter.SubscribeDown(id, JianZongOnDown)
-    KeyRouter.SubscribeUp(id, JianZongOnUp)
+    id := GetKeycode.ToRouterId(skillKey)
+    if (id = "") {
+        return
+    }
+    if !KeyRouter.SubscribeDown(id, JianZongOnDown) {
+        return
+    }
+    if !KeyRouter.SubscribeUp(id, JianZongOnUp) {
+        KeyRouter.UnsubscribeDown(id, JianZongOnDown)
+        return
+    }
+    _JianZongHotkeySub := { id: id, downFn: JianZongOnDown, upFn: JianZongOnUp }
 }
 
 JianZongOnDown(*) {
@@ -58,7 +76,7 @@ JianZongOnUp(*) {
 
 JianZongTickShouldStop() {
     global _JianZongPressKey
-    if !WinActive("ahk_group DNF")
+    if !GameContext.IsActiveNow()
         return true
     if (_JianZongPressKey = "" || !GetKeyState(_JianZongPressKey, "P"))
         return true

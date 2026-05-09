@@ -10,10 +10,10 @@ gAutoRunGui.OnEvent("Close", AutoRunGuiClose)
 
 gAutoRunGui.Add("Text", "x14 y48 w72 h26 +0x200", "左方向键")
 gAutoRunCtrls["AutoRunLeftKey"] := gAutoRunGui.Add("Edit", "vAutoRunLeftKey x94 y48 w168 h24 +ReadOnly -WantCtrlA -E0x200 Border")
-RegisterEditPressKeyCapture(gAutoRunCtrls["AutoRunLeftKey"])
+RegisterEditPressKeyCapture(gAutoRunCtrls["AutoRunLeftKey"], GetKeycode.AfterCaptureEdit.Bind(gAutoRunCtrls["AutoRunLeftKey"]))
 gAutoRunGui.Add("Text", "x14 y88 w72 h26 +0x200", "右方向键")
 gAutoRunCtrls["AutoRunRightKey"] := gAutoRunGui.Add("Edit", "vAutoRunRightKey x94 y88 w168 h24 +ReadOnly -WantCtrlA -E0x200 Border")
-RegisterEditPressKeyCapture(gAutoRunCtrls["AutoRunRightKey"])
+RegisterEditPressKeyCapture(gAutoRunCtrls["AutoRunRightKey"], GetKeycode.AfterCaptureEdit.Bind(gAutoRunCtrls["AutoRunRightKey"]))
 GuiTheme_HRule(gAutoRunGui, 14, 132, 362)
 GuiTheme_FlatBtn(gAutoRunGui, "x14 y142 w362 h36", "保存", AutoRunSave, true)
 GuiTheme_FlatBtnSmall(gAutoRunGui, "x350 y14 w26 h26", "?", AutoRunHelp)
@@ -58,6 +58,8 @@ AutoRunSave(*) {
 }
 
 AutoRunLoadConfig() {
-    AutoRunGetCtrl("AutoRunLeftKey").Text := LoadPreset(GetNowSelectPreset(), "AutoRunLeftKey", "Left")
-    AutoRunGetCtrl("AutoRunRightKey").Text := LoadPreset(GetNowSelectPreset(), "AutoRunRightKey", "Right")
+    l := GetKeycode.CanonMainKey(Trim(LoadPreset(GetNowSelectPreset(), "AutoRunLeftKey", "Left")))
+    r := GetKeycode.CanonMainKey(Trim(LoadPreset(GetNowSelectPreset(), "AutoRunRightKey", "Right")))
+    AutoRunGetCtrl("AutoRunLeftKey").Text := l != "" ? l : "Left"
+    AutoRunGetCtrl("AutoRunRightKey").Text := r != "" ? r : "Right"
 }

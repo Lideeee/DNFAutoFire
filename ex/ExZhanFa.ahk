@@ -15,7 +15,7 @@ ZhanFaUnregisterHotkeys() {
 ZhanFaRegisterHotkeys() {
     global _ZhanFaShotKeyCode, _ZhanFaShotIntervalMs
     ZhanFaUnregisterHotkeys()
-    if !MainCheckboxOn("ZhanFa") {
+    if !PresetExFeatures.IsOn("ZhanFa") {
         return
     }
     presetName := GetNowSelectPreset()
@@ -25,11 +25,17 @@ ZhanFaRegisterHotkeys() {
     if !LoadPreset(presetName, "ZhanFaState", false) {
         return
     }
-    shotKey := LoadPresetSafe(presetName, "ZhanFaShotKey")
+    shotKey := GetKeycode.CanonMainKey(LoadPresetSafe(presetName, "ZhanFaShotKey"))
     if (shotKey = "") {
         return
     }
-    skillKeys := ZhanFaLoadKeys(presetName)
+    skillKeys := []
+    for sk in ZhanFaLoadKeys(presetName) {
+        c := GetKeycode.CanonMainKey(sk)
+        if (c != "") {
+            skillKeys.Push(c)
+        }
+    }
     skillKeys := ZhanFaUniqueSkillKeysByPressKey(skillKeys)
     if (skillKeys.Length = 0) {
         return
@@ -40,7 +46,10 @@ ZhanFaRegisterHotkeys() {
     } else if (intervalMs > 200) {
         intervalMs := 200
     }
-    _ZhanFaShotKeyCode := Key2NoVkSC(shotKey)
+    _ZhanFaShotKeyCode := GetKeycode.ToSendToken(shotKey)
+    if (_ZhanFaShotKeyCode = "") {
+        return
+    }
     _ZhanFaShotIntervalMs := intervalMs
 
     loop skillKeys.Length {
@@ -51,11 +60,11 @@ ZhanFaRegisterHotkeys() {
         if (sk = "") {
             continue
         }
-        pressKey := Key2PressKey(sk)
+        pressKey := GetKeycode.ToProbeKey(sk)
         if (pressKey = "") {
             continue
         }
-        id := AutoFireMainHotkeyIdFromOrigin(sk)
+        id := GetKeycode.ToRouterId(sk)
         downFn := ZhanFaSkillDown.Bind(pressKey)
         upFn := ZhanFaSkillUp.Bind(pressKey)
         KeyRouter.SubscribeDown(id, downFn)
@@ -78,7 +87,7 @@ ZhanFaUniqueSkillKeysByPressKey(skillKeys) {
         if (sk = "") {
             continue
         }
-        pk := Key2PressKey(sk)
+        pk := GetKeycode.ToProbeKey(sk)
         if (pk = "") {
             continue
         }
@@ -119,7 +128,7 @@ ZhanFaSkillUp(pressKey, *) {
 
 ZhanFaShotTick() {
     global _ZhanFaShotKeyCode
-    if !WinActive("ahk_group DNF") {
+    if !GameContext.IsActiveNow() {
         return
     }
     static busy := false

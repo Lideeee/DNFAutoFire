@@ -1,5 +1,15 @@
 #Requires AutoHotkey v2.0
 
+class PresetRecognition {
+    static RetryIntervalMs := 500
+    static MaxRetryAttempts := 240
+    static _retryTimer := false
+    static _startDelayTimer := false
+    static _registeredEsc := false
+    static _registeredCustom := false
+    static _lastCustomHotkey := ""
+}
+
 PresetSkillIconDir() => A_ScriptDir "\preset_skill_icons"
 
 PresetSkillIcon_SafeName(presetName) {
@@ -88,7 +98,7 @@ PresetRecognition_FirstPresetName() {
 }
 
 PresetRecognition_GameActive() {
-    return WinActive("ahk_group DNF")
+    return GameContext.IsActiveNow()
 }
 
 ; 返回 Map: x,y,w,h 或空 Map（无效）
@@ -167,30 +177,8 @@ PresetCaptureRegionToPng(path, x, y, w, h) {
     }
 }
 
-global __gdipToken := 0
-
 _PresetGdipStartup() {
-    global __gdipToken
-    if __gdipToken {
-        return __gdipToken
-    }
-    DllCall("ole32\OleInitialize", "ptr", 0)
-    si := Buffer(A_PtrSize = 8 ? 24 : 16, 0)
-    NumPut("uint", 1, si, 0) ; GdiplusVersion
-    if (A_PtrSize = 8) {
-        NumPut("ptr", 0, si, 8) ; DebugEventCallback
-        NumPut("int", 0, si, 16) ; SuppressBackgroundThread
-        NumPut("int", 0, si, 20) ; SuppressExternalCodecs
-    } else {
-        NumPut("ptr", 0, si, 4)
-        NumPut("int", 0, si, 8)
-        NumPut("int", 0, si, 12)
-    }
-    if DllCall("gdiplus\GdiplusStartup", "ptr*", &pToken := 0, "ptr", si, "ptr", 0) != 0 {
-        throw Error("GdiplusStartup failed")
-    }
-    __gdipToken := pToken
-    return pToken
+    return GdiPlusSession.EnsureStarted()
 }
 
 _PresetGdipSaveHbitmapPng(hbm, path) {
@@ -387,28 +375,17 @@ FindPresetBySkillIcon() {
 
 ; ---------- 识别热键与重试序列 ----------
 
-PresetRecognition_RetryIntervalMs := 500
-PresetRecognition_MaxRetryAttempts := 240
-
-global __prRetryTimer := false
-global __prStartDelayTimer := false
-global __prRegisteredEsc := false
-global __prRegisteredCustom := false
-global __prLastCustomHotkey := ""
-
 PresetRecognition_ClearRetryTimer() {
-    global __prRetryTimer
-    if __prRetryTimer {
-        try SetTimer(__prRetryTimer, 0)
-        __prRetryTimer := false
+    if PresetRecognition._retryTimer {
+        try SetTimer(PresetRecognition._retryTimer, 0)
+        PresetRecognition._retryTimer := false
     }
 }
 
 PresetRecognition_ClearStartDelayTimer() {
-    global __prStartDelayTimer
-    if __prStartDelayTimer {
-        try SetTimer(__prStartDelayTimer, 0)
-        __prStartDelayTimer := false
+    if PresetRecognition._startDelayTimer {
+        try SetTimer(PresetRecognition._startDelayTimer, 0)
+        PresetRecognition._startDelayTimer := false
     }
 }
 
@@ -434,13 +411,12 @@ PresetRecognition_StartSequence() {
     }
     PresetRecognition_CancelPending()
     fn := PresetRecognition_AfterStartDelay
-    global __prStartDelayTimer := fn
+    PresetRecognition._startDelayTimer := fn
     SetTimer(fn, -1000)
 }
 
 PresetRecognition_AfterStartDelay(*) {
-    global __prStartDelayTimer
-    __prStartDelayTimer := false
+    PresetRecognition._startDelayTimer := false
     if !PresetRecognition_IsEnabled() {
         return
     }
@@ -480,14 +456,14 @@ PresetRecognition_RunAttempt(attemptIdx) {
 
     if PresetRecognition_UseCalibratePass() {
         if !CalibrateIconMatches() {
-            if (attemptIdx >= PresetRecognition_MaxRetryAttempts) {
+            if (attemptIdx >= PresetRecognition.MaxRetryAttempts) {
                 PresetRecognition_ClearRetryTimer()
                 AppTip("校准图未匹配")
                 return
             }
             fn := PresetRecognition_RunAttempt.Bind(attemptIdx + 1)
-            global __prRetryTimer := fn
-            SetTimer(fn, -PresetRecognition_RetryIntervalMs)
+            PresetRecognition._retryTimer := fn
+            SetTimer(fn, -PresetRecognition.RetryIntervalMs)
             return
         }
         skillFound := FindPresetBySkillIcon()
@@ -535,7 +511,7 @@ PresetRecognition_SkillOnlyAttempt(attemptIdx) {
         PresetRecognition_ClearRetryTimer()
         return
     }
-    if (attemptIdx >= PresetRecognition_MaxRetryAttempts) {
+    if (attemptIdx >= PresetRecognition.MaxRetryAttempts) {
         PresetRecognition_ClearRetryTimer()
         firstN := PresetRecognition_FirstPresetName()
         if (firstN != "" && firstN != current) {
@@ -545,8 +521,8 @@ PresetRecognition_SkillOnlyAttempt(attemptIdx) {
         return
     }
     fn := PresetRecognition_RunAttempt.Bind(attemptIdx + 1)
-    global __prRetryTimer := fn
-    SetTimer(fn, -PresetRecognition_RetryIntervalMs)
+    PresetRecognition._retryTimer := fn
+    SetTimer(fn, -PresetRecognition.RetryIntervalMs)
 }
 
 PresetRecognition_IsEscHotkeyStr(hk) {
@@ -555,21 +531,19 @@ PresetRecognition_IsEscHotkeyStr(hk) {
 }
 
 PresetRecognition_DisableAllHotkeys() {
-    global __prRegisteredEsc, __prRegisteredCustom, __prLastCustomHotkey
     PresetRecognition_CancelPending()
-    if __prRegisteredEsc {
+    if PresetRecognition._registeredEsc {
         try Hotkey("~Esc", "Off")
-        __prRegisteredEsc := false
+        PresetRecognition._registeredEsc := false
     }
-    if __prRegisteredCustom && __prLastCustomHotkey != "" {
-        try Hotkey("~$" __prLastCustomHotkey, "Off")
-        __prRegisteredCustom := false
-        __prLastCustomHotkey := ""
+    if PresetRecognition._registeredCustom && PresetRecognition._lastCustomHotkey != "" {
+        try Hotkey("~$" PresetRecognition._lastCustomHotkey, "Off")
+        PresetRecognition._registeredCustom := false
+        PresetRecognition._lastCustomHotkey := ""
     }
 }
 
 PresetRecognition_UpdateHotkeys() {
-    global __prRegisteredEsc, __prRegisteredCustom, __prLastCustomHotkey
     PresetRecognition_DisableAllHotkeys()
     if !PresetRecognition_IsEnabled() {
         return
@@ -578,11 +552,11 @@ PresetRecognition_UpdateHotkeys() {
         return
     }
     hk := Trim(LoadConfig("AutoPresetHotkey", ""))
-    __prRegisteredEsc := true
+    PresetRecognition._registeredEsc := true
     Hotkey("~Esc", PresetRecognition_Trigger, "On")
     if (hk != "" && !PresetRecognition_IsEscHotkeyStr(hk)) {
-        __prLastCustomHotkey := hk
-        __prRegisteredCustom := true
+        PresetRecognition._lastCustomHotkey := hk
+        PresetRecognition._registeredCustom := true
         Hotkey("~$" hk, PresetRecognition_Trigger, "On")
     }
 }

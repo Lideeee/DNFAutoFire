@@ -42,7 +42,7 @@ GuiTheme_FlatBtn(gComboGui, "x224 y252 w112 h26", "添加技能", ComboAddSkill,
 GuiTheme_FlatBtn(gComboGui, "x344 y252 w112 h26", "删除技能", ComboDeleteSkill, false)
 gComboGui.Add("Text", "x224 y294 w44 h22 +0x200", "触发键")
 gComboCtrls["ComboTriggerKey"] := gComboGui.Add("Edit", "vComboTriggerKey x272 y292 w232 h24 +ReadOnly -WantCtrlA -E0x200 Border")
-RegisterEditPressKeyCapture(gComboCtrls["ComboTriggerKey"])
+RegisterEditPressKeyCapture(gComboCtrls["ComboTriggerKey"], GetKeycode.AfterCaptureEdit.Bind(gComboCtrls["ComboTriggerKey"]))
 gComboCtrls["ComboLoopMode"] := gComboGui.Add("CheckBox", "vComboLoopMode x512 y294 h22", "循环触发")
 GuiTheme_FlatBtn(gComboGui, "x160 y348 w140 h32", "应用方案", ComboApplyProfile, false)
 GuiTheme_FlatBtn(gComboGui, "x316 y348 w140 h32", "保存", ComboSaveAndClose, true)
@@ -117,8 +117,12 @@ ComboRefreshList() {
 
 ComboAddSkill(*) {
     global __ComboSkillItems
-    key := GetPressKey()
+    raw := GetPressKey()
+    key := GetKeycode.CanonMainKey(raw)
     if (key = "") {
+        if (raw != "") {
+            MsgBox("仅支持主连发键盘上的键。",, "Icon!")
+        }
         return
     }
     delay := 20
@@ -179,6 +183,10 @@ ComboParseSkills(raw) {
             continue
         }
         key := Trim(parts[1])
+        if (key = "") {
+            continue
+        }
+        key := GetKeycode.CanonMainKey(key)
         if (key = "") {
             continue
         }
@@ -266,7 +274,7 @@ ComboParseProfiles(raw) {
         if (parts.Length < 2) {
             continue
         }
-        trigger := parts[1]
+        trigger := GetKeycode.CanonMainKey(Trim(parts[1]))
         loopOn := (parts.Length >= 2 && Trim(parts[2]) = "1")
         skillsRaw := parts.Length >= 3 ? parts[3] : ""
         out.Push({ trigger: trigger, loop: loopOn, skills: ComboParseSkills(skillsRaw) })
@@ -279,7 +287,7 @@ ComboLoadProfilesFromPreset(presetName) {
     if (raw != "") {
         return ComboParseProfiles(raw)
     }
-    trigger := LoadPresetSafe(presetName, "ComboTriggerKey")
+    trigger := GetKeycode.CanonMainKey(LoadPresetSafe(presetName, "ComboTriggerKey"))
     skills := ComboParseSkills(LoadPresetSafe(presetName, "ComboSkills"))
     loopOn := LoadPreset(presetName, "ComboLoopMode", false)
     return [{ trigger: trigger, loop: loopOn, skills: skills }]
@@ -404,11 +412,11 @@ ComboSaveConfig() {
         if (t = "") {
             continue
         }
-        try {
-            id := AutoFireMainHotkeyIdFromOrigin(t)
-        } catch {
-            id := t
+        c := GetKeycode.CanonMainKey(t)
+        if (c = "") {
+            continue
         }
+        id := GetKeycode.ToRouterId(c)
         if (id = "") {
             continue
         }
@@ -468,7 +476,14 @@ ComboShowEditDialog(item) {
 
 ComboEditChangeKey(*) {
     global gComboEditCtrls, gComboEditKey
-    key := GetPressKey()
+    raw := GetPressKey()
+    key := GetKeycode.CanonMainKey(raw)
+    if (key = "") {
+        if (raw != "") {
+            MsgBox("仅支持主连发键盘上的键。",, "Icon!")
+        }
+        return
+    }
     gComboEditKey := key
     gComboEditCtrls["ComboEditCurrentKey"].Text := key
 }

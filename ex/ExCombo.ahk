@@ -12,9 +12,15 @@ global _ComboPendingTimer := ""
 global _ComboSkillsCount := 0
 global _ComboActiveProfileIdx := 0
 global _ComboRuntimeProfiles := []
+global _ComboHotkeySubs := []
 
 ComboUnregisterHotkeys() {
-    global _ComboSkillsCount, _ComboSentMap, _ComboRuntimeProfiles, _ComboActiveProfileIdx
+    global _ComboSkillsCount, _ComboSentMap, _ComboRuntimeProfiles, _ComboActiveProfileIdx, _ComboHotkeySubs
+    for sub in _ComboHotkeySubs {
+        KeyRouter.UnsubscribeDown(sub.id, sub.downFn)
+        KeyRouter.UnsubscribeUp(sub.id, sub.upFn)
+    }
+    _ComboHotkeySubs := []
     ComboFinish()
     _ComboSkillsCount := 0
     _ComboSentMap := Map()
@@ -57,9 +63,9 @@ ComboCloneRuntimeProfile(pr) {
 }
 
 ComboRegisterHotkeys() {
-    global _ComboMainIntervalMs, _ComboRuntimeProfiles
+    global _ComboMainIntervalMs, _ComboRuntimeProfiles, _ComboHotkeySubs
     ComboUnregisterHotkeys()
-    if !MainCheckboxOn("Combo") {
+    if !PresetExFeatures.IsOn("Combo") {
         return
     }
     presetName := GetNowSelectPreset()
@@ -91,12 +97,24 @@ ComboRegisterHotkeys() {
         }
         i := A_Index
         p := _ComboRuntimeProfiles[i]
-        if (Trim(p.trigger) = "" || p.skills.Length = 0) {
+        trig := GetKeycode.CanonMainKey(Trim(p.trigger))
+        if (trig = "" || p.skills.Length = 0) {
             continue
         }
-        id := AutoFireMainHotkeyIdFromOrigin(p.trigger)
-        KeyRouter.SubscribeDown(id, ComboOnDown.Bind(i))
-        KeyRouter.SubscribeUp(id, ComboOnUp.Bind(i))
+        id := GetKeycode.ToRouterId(trig)
+        if (id = "") {
+            continue
+        }
+        downFn := ComboOnDown.Bind(i)
+        upFn := ComboOnUp.Bind(i)
+        if !KeyRouter.SubscribeDown(id, downFn) {
+            continue
+        }
+        if !KeyRouter.SubscribeUp(id, upFn) {
+            KeyRouter.UnsubscribeDown(id, downFn)
+            continue
+        }
+        _ComboHotkeySubs.Push({ id: id, downFn: downFn, upFn: upFn })
     }
 }
 
@@ -142,7 +160,8 @@ ComboPrepareProfile(setIdx) {
     }
     _ComboSkills := p.skills
     _ComboSkillsCount := p.skills.Length
-    _ComboTriggerPressKey := Key2PressKey(p.trigger)
+    trig := GetKeycode.CanonMainKey(Trim(p.trigger))
+    _ComboTriggerPressKey := trig != "" ? GetKeycode.ToProbeKey(trig) : ""
     _ComboLoopMode := p.loop
     _ComboBreakOnRelease := _ComboLoopMode
     return true
@@ -150,7 +169,7 @@ ComboPrepareProfile(setIdx) {
 
 ComboShouldAbort() {
     global _ComboAbortRequested, _ComboBreakOnRelease, _ComboTriggerPressKey
-    if _ComboAbortRequested || !WinActive("ahk_group DNF")
+    if _ComboAbortRequested || !GameContext.IsActiveNow()
         return true
     if (_ComboBreakOnRelease && _ComboTriggerPressKey != "" && !GetKeyState(_ComboTriggerPressKey, "P"))
         return true
@@ -199,7 +218,10 @@ ComboSendSkillAt(idx) {
         return
     }
     try {
-        SendIP(Key2NoVkSC(item.key))
+        k := GetKeycode.CanonMainKey(item.key)
+        if (k != "") {
+            SendIP(GetKeycode.ToSendToken(k))
+        }
     } catch {
     }
     delay := item.delay + 0

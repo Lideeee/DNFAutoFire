@@ -1,4 +1,4 @@
-; 键盘名列表（界面与配置用）。主连发为事件驱动：HotIfWinActive(DNF) 下 ~$ 扫描码热键 Down 启定时器、Up 停，tick 内调 SendIP。
+; 键盘名列表（界面与配置用）。主连发为事件驱动：HotIfWinActive(DNF) 下 ~$ 扫描码热键 Down 启定时器、Up 停，tick 内用 GameContext.IsActive 再判后发 SendIP。
 GetAllKeys() {
     return ["Esc", "F1", "F2", "F3", "F4", "F5", "F6", "F7", "F8", "F9", "F10", "F11", "F12", "Tilde", "1", "2", "3", "4", "5", "6", "7", "8", "9", "0", "Sub", "Add", "Backspace", "Tab", "Q", "W", "E", "R", "T", "Y", "U", "I", "O", "P", "LeftBracket", "RightBracket", "Backslash", "Caps", "A", "S", "D", "F", "G", "H", "J", "K", "L", "Semicolon", "QuotationMark", "Enter", "LShift", "Z", "X", "C", "V", "B", "N", "M", "Comma", "Period", "Slash", "RShift", "LCtrl", "LAlt", "Space", "RAlt", "RCtrl", "Up", "Down", "Left", "Right", "Num1", "Num2", "Num3", "Num4", "Num5", "Num6", "Num7", "Num8", "Num9", "Num0", "NumPeriod", "NumLk", "NumEnter", "NumAdd", "NumSub", "NumStar", "NumSlash"]
 }

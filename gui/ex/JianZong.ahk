@@ -13,7 +13,7 @@ gJianZongGui.Add("Text", "x14 y48 w110 h24 +0x200", "延迟时间(ms)")
 gJianZongCtrls["JianZongDelay"] := gJianZongGui.Add("Edit", "vJianZongDelay x126 y48 w72 h24 +Number -E0x200 Border")
 gJianZongGui.Add("Text", "x14 y80 w110 h24 +0x200", "帝国剑术键")
 gJianZongCtrls["JianZongSkillKey"] := gJianZongGui.Add("Edit", "vJianZongSkillKey x126 y80 w72 h24 +ReadOnly -WantCtrlA -E0x200 Border")
-RegisterEditPressKeyCapture(gJianZongCtrls["JianZongSkillKey"])
+RegisterEditPressKeyCapture(gJianZongCtrls["JianZongSkillKey"], GetKeycode.AfterCaptureEdit.Bind(gJianZongCtrls["JianZongSkillKey"]))
 GuiTheme_HRule(gJianZongGui, 14, 118, 302)
 GuiTheme_FlatBtn(gJianZongGui, "x89 y128 w152 h34", "保存", JianZongSave, true)
 GuiTheme_FlatBtnSmall(gJianZongGui, "x290 y10 w26 h26", "?", JianZongHelp)
@@ -69,7 +69,8 @@ JianZongSaveConfig() {
 }
 
 JianZongLoadConfig() {
-    JianZongGetCtrl("JianZongSkillKey").Text := LoadPreset(GetNowSelectPreset(), "JianZongSkillKey", "A")
+    sk := GetKeycode.CanonMainKey(Trim(LoadPreset(GetNowSelectPreset(), "JianZongSkillKey", "A")))
+    JianZongGetCtrl("JianZongSkillKey").Text := sk != "" ? sk : "A"
     delay := Round(LoadPreset(GetNowSelectPreset(), "JianZongDelay", 200) + 0)
     if (delay < 20) {
         delay := 20

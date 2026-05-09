@@ -17,7 +17,7 @@ GuiTheme_FlatBtnCompact(gLvRenGui, "x14 y214 w54 h24", "添加", LvRenAddKey)
 GuiTheme_FlatBtnCompact(gLvRenGui, "x76 y214 w54 h24", "删除", LvRenDeleteKey)
 gLvRenGui.Add("Text", "x128 y36 w100 h24 +0x200", "流星发射键")
 gLvRenCtrls["LvRenShotKey"] := gLvRenGui.Add("Edit", "vLvRenShotKey x234 y36 w56 h24 +ReadOnly -WantCtrlA -E0x200 Border")
-RegisterEditPressKeyCapture(gLvRenCtrls["LvRenShotKey"])
+RegisterEditPressKeyCapture(gLvRenCtrls["LvRenShotKey"], GetKeycode.AfterCaptureEdit.Bind(gLvRenCtrls["LvRenShotKey"]))
 GuiTheme_HRule(gLvRenGui, 14, 252, 280)
 GuiTheme_FlatBtn(gLvRenGui, "x78 y260 w152 h34", "保存", LvRenSave, true)
 
@@ -56,8 +56,12 @@ LvRenHelp(*) {
 
 LvRenAddKey(*) {
     global __LvRenSkillKeys
-    key := GetPressKey()
+    raw := GetPressKey()
+    key := GetKeycode.CanonMainKey(raw)
     if (key = "") {
+        if (raw != "") {
+            MsgBox("仅支持主连发键盘上的键。",, "Icon!")
+        }
         return
     }
     if IsValueInArray(key, __LvRenSkillKeys) {
@@ -136,7 +140,14 @@ LvRenSaveConfig() {
 LvRenLoadConfig() {
     global __LvRenSkillKeys
     shotKey := LoadPreset(GetNowSelectPreset(), "LvRenShotKey", "Z")
-    __LvRenSkillKeys := LvRenLoadKeys(GetNowSelectPreset())
+    cShot := GetKeycode.CanonMainKey(Trim(shotKey))
+    LvRenGetCtrl("LvRenShotKey").Text := cShot != "" ? cShot : "Z"
+    __LvRenSkillKeys := []
+    for sk in LvRenLoadKeys(GetNowSelectPreset()) {
+        c := GetKeycode.CanonMainKey(sk)
+        if (c != "") {
+            __LvRenSkillKeys.Push(c)
+        }
+    }
     LvRenChangeListGui(__LvRenSkillKeys)
-    LvRenGetCtrl("LvRenShotKey").Text := shotKey
 }

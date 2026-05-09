@@ -4,18 +4,24 @@ global _LvRenKeyHeld := Map()
 global _LvRenActiveCount := 0
 global _LvRenShotKeyCode := ""
 global _LvRenShotIntervalMs := 20
+global _LvRenHotkeySubs := []
 
 LvRenUnregisterHotkeys() {
-    global _LvRenKeyHeld, _LvRenActiveCount
+    global _LvRenKeyHeld, _LvRenActiveCount, _LvRenHotkeySubs
     SetTimer(LvRenShotTick, 0)
     _LvRenKeyHeld := Map()
     _LvRenActiveCount := 0
+    for sub in _LvRenHotkeySubs {
+        KeyRouter.UnsubscribeDown(sub.id, sub.downFn)
+        KeyRouter.UnsubscribeUp(sub.id, sub.upFn)
+    }
+    _LvRenHotkeySubs := []
 }
 
 LvRenRegisterHotkeys() {
     global _LvRenShotKeyCode, _LvRenShotIntervalMs
     LvRenUnregisterHotkeys()
-    if !MainCheckboxOn("LvRen") {
+    if !PresetExFeatures.IsOn("LvRen") {
         return
     }
     presetName := GetNowSelectPreset()
@@ -25,11 +31,17 @@ LvRenRegisterHotkeys() {
     if !LoadPreset(presetName, "LvRenState", false) {
         return
     }
-    shotKey := LoadPresetSafe(presetName, "LvRenShotKey")
+    shotKey := GetKeycode.CanonMainKey(LoadPresetSafe(presetName, "LvRenShotKey"))
     if (shotKey = "") {
         return
     }
-    skillKeys := LvRenLoadKeys(presetName)
+    skillKeys := []
+    for sk in LvRenLoadKeys(presetName) {
+        c := GetKeycode.CanonMainKey(sk)
+        if (c != "") {
+            skillKeys.Push(c)
+        }
+    }
     skillKeys := LvRenUniqueSkillKeysByPressKey(skillKeys)
     if (skillKeys.Length = 0) {
         return
@@ -40,7 +52,10 @@ LvRenRegisterHotkeys() {
     } else if (intervalMs > 200) {
         intervalMs := 200
     }
-    _LvRenShotKeyCode := Key2NoVkSC(shotKey)
+    _LvRenShotKeyCode := GetKeycode.ToSendToken(shotKey)
+    if (_LvRenShotKeyCode = "") {
+        return
+    }
     _LvRenShotIntervalMs := intervalMs
 
     loop skillKeys.Length {
@@ -51,13 +66,21 @@ LvRenRegisterHotkeys() {
         if (sk = "") {
             continue
         }
-        pressKey := Key2PressKey(sk)
+        pressKey := GetKeycode.ToProbeKey(sk)
         if (pressKey = "") {
             continue
         }
-        id := AutoFireMainHotkeyIdFromOrigin(sk)
-        KeyRouter.SubscribeDown(id, LvRenSkillDown.Bind(pressKey))
-        KeyRouter.SubscribeUp(id, LvRenSkillUp.Bind(pressKey))
+        id := GetKeycode.ToRouterId(sk)
+        downFn := LvRenSkillDown.Bind(pressKey)
+        upFn := LvRenSkillUp.Bind(pressKey)
+        if !KeyRouter.SubscribeDown(id, downFn) {
+            continue
+        }
+        if !KeyRouter.SubscribeUp(id, upFn) {
+            KeyRouter.UnsubscribeDown(id, downFn)
+            continue
+        }
+        _LvRenHotkeySubs.Push({ id: id, downFn: downFn, upFn: upFn })
     }
 }
 
@@ -76,7 +99,7 @@ LvRenUniqueSkillKeysByPressKey(skillKeys) {
         if (sk = "") {
             continue
         }
-        pk := Key2PressKey(sk)
+        pk := GetKeycode.ToProbeKey(sk)
         if (pk = "") || seen.Has(pk) {
             continue
         }
@@ -114,7 +137,7 @@ LvRenSkillUp(pressKey, *) {
 
 LvRenShotTick() {
     global _LvRenShotKeyCode
-    if !WinActive("ahk_group DNF") {
+    if !GameContext.IsActiveNow() {
         return
     }
     static busy := false

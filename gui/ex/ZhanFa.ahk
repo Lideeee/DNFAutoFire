@@ -17,7 +17,7 @@ GuiTheme_FlatBtnCompact(gZhanFaGui, "x14 y214 w54 h24", "添加", ZhanFaAddKey)
 GuiTheme_FlatBtnCompact(gZhanFaGui, "x76 y214 w54 h24", "删除", ZhanFaDeleteKey)
 gZhanFaGui.Add("Text", "x128 y36 w100 h24 +0x200", "炫纹发射键")
 gZhanFaCtrls["ZhanFaShotKey"] := gZhanFaGui.Add("Edit", "vZhanFaShotKey x234 y36 w56 h24 +ReadOnly -WantCtrlA -E0x200 Border")
-RegisterEditPressKeyCapture(gZhanFaCtrls["ZhanFaShotKey"])
+RegisterEditPressKeyCapture(gZhanFaCtrls["ZhanFaShotKey"], GetKeycode.AfterCaptureEdit.Bind(gZhanFaCtrls["ZhanFaShotKey"]))
 GuiTheme_HRule(gZhanFaGui, 14, 252, 280)
 GuiTheme_FlatBtn(gZhanFaGui, "x78 y260 w152 h34", "保存", ZhanFaSave, true)
 
@@ -56,8 +56,12 @@ ZhanFaHelp(*) {
 
 ZhanFaAddKey(*) {
     global __ZhanFaSkillKeys
-    key := GetPressKey()
+    raw := GetPressKey()
+    key := GetKeycode.CanonMainKey(raw)
     if (key = "") {
+        if (raw != "") {
+            MsgBox("仅支持主连发键盘上的键。",, "Icon!")
+        }
         return
     }
     if IsValueInArray(key, __ZhanFaSkillKeys) {
@@ -136,7 +140,14 @@ ZhanFaSaveConfig() {
 ZhanFaLoadConfig() {
     global __ZhanFaSkillKeys
     shotKey := LoadPreset(GetNowSelectPreset(), "ZhanFaShotKey", "Space")
-    __ZhanFaSkillKeys := ZhanFaLoadKeys(GetNowSelectPreset())
+    cShot := GetKeycode.CanonMainKey(Trim(shotKey))
+    ZhanFaGetCtrl("ZhanFaShotKey").Text := cShot != "" ? cShot : "Space"
+    __ZhanFaSkillKeys := []
+    for sk in ZhanFaLoadKeys(GetNowSelectPreset()) {
+        c := GetKeycode.CanonMainKey(sk)
+        if (c != "") {
+            __ZhanFaSkillKeys.Push(c)
+        }
+    }
     ZhanFaChangeListGui(__ZhanFaSkillKeys)
-    ZhanFaGetCtrl("ZhanFaShotKey").Text := shotKey
 }

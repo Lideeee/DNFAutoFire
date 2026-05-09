@@ -1,4 +1,4 @@
-; 自动奔跑：主进程事件驱动。KeyRouter 监听方向键，单次负定时器发送连跑指令。
+; 自动奔跑：须持续按住满 30ms 才 SendEvent 一串 Down-Up-Down（未满则抬起取消）；Critical 包裹发送。
 
 class ExAutoRun {
     static _sides := Map()
@@ -6,7 +6,7 @@ class ExAutoRun {
 
     static RegisterHotkeys() {
         this.UnregisterHotkeys()
-        if !MainCheckboxOn("AutoRun") {
+        if !PresetExFeatures.IsOn("AutoRun") {
             return
         }
         presetName := GetNowSelectPreset()
@@ -19,37 +19,62 @@ class ExAutoRun {
             leftKey := "Left"
         if (rightKey = "")
             rightKey := "Right"
+        lCanon := GetKeycode.CanonMainKey(leftKey)
+        if (lCanon = "")
+            lCanon := "Left"
+        rCanon := GetKeycode.CanonMainKey(rightKey)
+        if (rCanon = "")
+            rCanon := "Right"
 
         sides := Map()
-        this._addSide(sides, "R", rightKey)
-        this._addSide(sides, "L", leftKey)
-        this._sides := sides
+        this._addSide(sides, "R", rCanon)
+        this._addSide(sides, "L", lCanon)
 
-        for _, s in this._sides {
-            KeyRouter.SubscribeDown(s.scID, s.downFn)
-            KeyRouter.SubscribeUp(s.scID, s.upFn)
+        subscribed := []
+        for _, s in sides {
+            if !KeyRouter.SubscribeDown(s.scID, s.downFn) {
+                ExAutoRun._rollbackSubs(subscribed)
+                return
+            }
+            if !KeyRouter.SubscribeUp(s.scID, s.upFn) {
+                KeyRouter.UnsubscribeDown(s.scID, s.downFn)
+                ExAutoRun._rollbackSubs(subscribed)
+                return
+            }
+            subscribed.Push(s)
         }
+        this._sides := sides
         this._registered := true
     }
 
+    static _rollbackSubs(subscribed) {
+        for s in subscribed {
+            KeyRouter.UnsubscribeDown(s.scID, s.downFn)
+            KeyRouter.UnsubscribeUp(s.scID, s.upFn)
+        }
+    }
+
     static _addSide(sides, tag, logicalKey) {
-        scID := AutoFireMainHotkeyIdFromOrigin(logicalKey)
-        pulseSend := "{Blind}{" logicalKey " Down}{" logicalKey " Up}{" logicalKey " Down}"
-        upSend := "{Blind}{" logicalKey " Up}"
-        timerFn := ObjBindMethod(ExAutoRun, "Pulse", tag)
+        scID := GetKeycode.ToRouterId(logicalKey)
+        kc := GetKeycode.ToSendToken(logicalKey)
+        seq := "{Blind}{" kc " Down}{" kc " Up}{" kc " Down}"
         sides[tag] := {
             scID: scID,
-            pulseSend: pulseSend,
-            upSend: upSend,
-            timerFn: timerFn,
+            seq: seq,
+            held: false,
+            timerFn: ObjBindMethod(ExAutoRun, "Pulse", tag),
             downFn: ObjBindMethod(ExAutoRun, "Down", tag),
-            upFn: ObjBindMethod(ExAutoRun, "Up", tag)
+            upFn: ObjBindMethod(ExAutoRun, "Up", tag),
         }
     }
 
     static UnregisterHotkeys() {
         for _, s in this._sides {
             SetTimer(s.timerFn, 0)
+            if IsObject(s) {
+                KeyRouter.UnsubscribeDown(s.scID, s.downFn)
+                KeyRouter.UnsubscribeUp(s.scID, s.upFn)
+            }
         }
         this._sides := Map()
         this._registered := false
@@ -60,7 +85,8 @@ class ExAutoRun {
         if !IsObject(s) {
             return
         }
-        SetTimer(s.timerFn, -25)
+        s.held := true
+        SetTimer(s.timerFn, -30)
     }
 
     static Up(tag, *) {
@@ -68,17 +94,23 @@ class ExAutoRun {
         if !IsObject(s) {
             return
         }
+        s.held := false
         SetTimer(s.timerFn, 0)
-        SendEvent(s.upSend)
     }
 
     static Pulse(tag) {
         s := ExAutoRun._sides.Get(tag, "")
-        if !IsObject(s) {
+        if !IsObject(s) || !s.held {
             return
         }
-        if WinActive("ahk_group DNF") {
-            SendEvent(s.pulseSend)
+        if !GameContext.IsActiveNow() {
+            return
+        }
+        Critical("On")
+        try {
+            SendEvent(s.seq)
+        } finally {
+            Critical("Off")
         }
     }
 }

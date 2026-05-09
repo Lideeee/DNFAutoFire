@@ -1,14 +1,20 @@
 ; 宠物技能：监听键边沿发一发发射键；KeyRouter + 主进程
 
 global _PetSkillShotKeyCode := ""
+global _PetSkillHotkeySubs := []
 
 PetSkillUnregisterHotkeys() {
+    global _PetSkillHotkeySubs
+    for sub in _PetSkillHotkeySubs {
+        KeyRouter.UnsubscribeDown(sub.id, sub.downFn)
+    }
+    _PetSkillHotkeySubs := []
 }
 
 PetSkillRegisterHotkeys() {
-    global _PetSkillShotKeyCode
+    global _PetSkillShotKeyCode, _PetSkillHotkeySubs
     PetSkillUnregisterHotkeys()
-    if !MainCheckboxOn("PetSkill") {
+    if !PresetExFeatures.IsOn("PetSkill") {
         return
     }
     presetName := GetNowSelectPreset()
@@ -18,16 +24,25 @@ PetSkillRegisterHotkeys() {
     if !LoadPreset(presetName, "PetSkillState", false) {
         return
     }
-    shotKey := LoadPresetSafe(presetName, "PetSkillShotKey")
+    shotKey := GetKeycode.CanonMainKey(LoadPresetSafe(presetName, "PetSkillShotKey"))
     if (shotKey = "") {
         return
     }
-    skillKeys := PetSkillLoadKeys(presetName)
+    skillKeys := []
+    for sk in PetSkillLoadKeys(presetName) {
+        c := GetKeycode.CanonMainKey(sk)
+        if (c != "") {
+            skillKeys.Push(c)
+        }
+    }
     skillKeys := PetSkillUniqueSkillKeysByPressKey(skillKeys)
     if (skillKeys.Length = 0) {
         return
     }
-    _PetSkillShotKeyCode := Key2NoVkSC(shotKey)
+    _PetSkillShotKeyCode := GetKeycode.ToSendToken(shotKey)
+    if (_PetSkillShotKeyCode = "") {
+        return
+    }
 
     loop skillKeys.Length {
         if !skillKeys.Has(A_Index) {
@@ -37,12 +52,16 @@ PetSkillRegisterHotkeys() {
         if (sk = "") {
             continue
         }
-        pressKey := Key2PressKey(sk)
+        pressKey := GetKeycode.ToProbeKey(sk)
         if (pressKey = "") {
             continue
         }
-        id := AutoFireMainHotkeyIdFromOrigin(sk)
-        KeyRouter.SubscribeDown(id, PetSkillOnDown.Bind(pressKey))
+        id := GetKeycode.ToRouterId(sk)
+        downFn := PetSkillOnDown.Bind(pressKey)
+        if !KeyRouter.SubscribeDown(id, downFn) {
+            continue
+        }
+        _PetSkillHotkeySubs.Push({ id: id, downFn: downFn })
     }
 }
 
@@ -61,7 +80,7 @@ PetSkillUniqueSkillKeysByPressKey(skillKeys) {
         if (sk = "") {
             continue
         }
-        pk := Key2PressKey(sk)
+        pk := GetKeycode.ToProbeKey(sk)
         if (pk = "") || seen.Has(pk) {
             continue
         }
@@ -72,8 +91,8 @@ PetSkillUniqueSkillKeysByPressKey(skillKeys) {
 }
 
 PetSkillOnDown(pressKey, *) {
-    global _PetSkillShotKeyCode
-    if !WinActive("ahk_group DNF") {
+    global _PetSkillShotKeyCode, _PetSkillHotkeySubs
+    if !GameContext.IsActiveNow() {
         return
     }
     try {

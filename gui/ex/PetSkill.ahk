@@ -17,7 +17,7 @@ GuiTheme_FlatBtnCompact(gPetSkillGui, "x14 y214 w54 h24", "添加", PetSkillAddK
 GuiTheme_FlatBtnCompact(gPetSkillGui, "x76 y214 w54 h24", "删除", PetSkillDeleteKey)
 gPetSkillGui.Add("Text", "x128 y36 w100 h24 +0x200", "宠物技能键")
 gPetSkillCtrls["PetSkillShotKey"] := gPetSkillGui.Add("Edit", "vPetSkillShotKey x234 y36 w56 h24 +ReadOnly -WantCtrlA -E0x200 Border")
-RegisterEditPressKeyCapture(gPetSkillCtrls["PetSkillShotKey"])
+RegisterEditPressKeyCapture(gPetSkillCtrls["PetSkillShotKey"], GetKeycode.AfterCaptureEdit.Bind(gPetSkillCtrls["PetSkillShotKey"]))
 GuiTheme_HRule(gPetSkillGui, 14, 252, 280)
 GuiTheme_FlatBtn(gPetSkillGui, "x78 y260 w152 h34", "保存", PetSkillSave, true)
 
@@ -56,8 +56,12 @@ PetSkillHelp(*) {
 
 PetSkillAddKey(*) {
     global __PetSkillSkillKeys
-    key := GetPressKey()
+    raw := GetPressKey()
+    key := GetKeycode.CanonMainKey(raw)
     if (key = "") {
+        if (raw != "") {
+            MsgBox("仅支持主连发键盘上的键。",, "Icon!")
+        }
         return
     }
     if IsValueInArray(key, __PetSkillSkillKeys) {
@@ -136,7 +140,14 @@ PetSkillSaveConfig() {
 PetSkillLoadConfig() {
     global __PetSkillSkillKeys
     shotKey := LoadPreset(GetNowSelectPreset(), "PetSkillShotKey", "V")
-    __PetSkillSkillKeys := PetSkillLoadKeys(GetNowSelectPreset())
+    cShot := GetKeycode.CanonMainKey(Trim(shotKey))
+    PetSkillGetCtrl("PetSkillShotKey").Text := cShot != "" ? cShot : "V"
+    __PetSkillSkillKeys := []
+    for sk in PetSkillLoadKeys(GetNowSelectPreset()) {
+        c := GetKeycode.CanonMainKey(sk)
+        if (c != "") {
+            __PetSkillSkillKeys.Push(c)
+        }
+    }
     PetSkillChangeListGui(__PetSkillSkillKeys)
-    PetSkillGetCtrl("PetSkillShotKey").Text := shotKey
 }

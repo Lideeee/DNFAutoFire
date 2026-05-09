@@ -1,12 +1,14 @@
 #Requires AutoHotkey v2.0
 
-global GuiTheme_Face := "Microsoft YaHei UI"
-global GuiTheme_Hint := "64748B"
-global GuiTheme_KeyOff := "334155"
-global GuiTheme_KeyOn := "DC2626"
-global GuiTheme_KeyOv := "2563EB"
-global GuiTheme_KeyCellBg := "E2E8F0"
-global GuiTheme_SwitchTrackOn := "93C5FD"
+#Include <UiTheme>
+
+global GuiTheme_Face := UiTheme.Face
+global GuiTheme_Hint := UiTheme.Hint
+global GuiTheme_KeyOff := UiTheme.KeyOff
+global GuiTheme_KeyOn := UiTheme.KeyOn
+global GuiTheme_KeyOv := UiTheme.KeyOv
+global GuiTheme_KeyCellBg := UiTheme.KeyCellBg
+global GuiTheme_SwitchTrackOn := UiTheme.SwitchTrackOn
 
 ; 使用 -VScroll 隐藏竖条时，靠 WM_MOUSEWHEEL + LB_SETTOPINDEX 滚动（见 GuiTheme_RegisterListBoxWheel）
 global GuiTheme__LbWheelHwnds := Map()
@@ -15,18 +17,13 @@ GuiTheme_Apply(gui) {
     if !IsObject(gui) {
         return
     }
-    try gui.BackColor := "F8FAFC"
-    gui.SetFont("s10 norm c334155", GuiTheme_Face)
+    try gui.BackColor := UiTheme.WindowBg
+    gui.SetFont("s10 norm c" UiTheme.KeyOff, GuiTheme_Face)
 }
 
-; Text 扁平按钮（与主界面「自动识别配置」一致）。primary 保留兼容旧调用，样式不再区分主次。
+; GDI+ 圆角按钮；primary 为真时使用主色（保存等强调按钮）。
 GuiTheme_FlatBtn(gui, opts, text, handler, primary := false) {
-    ctrl := gui.Add("Text", opts " +0x200 +0x100 +Center Background" GuiTheme_KeyCellBg " c334155 -E0x200", text)
-    ctrl.SetFont("s9 norm c334155", GuiTheme_Face)
-    if IsSet(handler) && handler != "" {
-        ctrl.OnEvent("Click", handler)
-    }
-    return ctrl
+    return FlatButtonGdip(gui, opts, text, handler, primary).ctrl
 }
 
 GuiTheme_FlatBtnSmall(gui, opts, text, handler) {
@@ -128,6 +125,7 @@ GuiTheme_FlatTextBtn(gui, opts, text, handler) {
     return GuiTheme_FlatBtn(gui, opts, text, handler, false)
 }
 
+; 经典双 Text 开关（子窗体仍可复用）；主界面扩展行优先用 ToggleGdip。
 GuiTheme_FlatSwitch(gui, x, y, tw, th) {
     ks := th - 4
     track := gui.Add("Text", "x" x " y" y " w" tw " h" th " +0x200 Background" GuiTheme_KeyCellBg, "")
@@ -135,7 +133,6 @@ GuiTheme_FlatSwitch(gui, x, y, tw, th) {
     return { track: track, knob: knob, x: x, y: y, tw: tw, th: th, ks: ks }
 }
 
-; 扁平开关外观：ui 为 GuiTheme_FlatSwitch 返回值（含 track、knob、x、y、tw、th、ks）
 GuiTheme_FlatSwitchPaint(ui, on) {
     global GuiTheme_KeyCellBg, GuiTheme_SwitchTrackOn
     if !IsObject(ui) || !IsObject(ui.track) || !IsObject(ui.knob) {
@@ -152,3 +149,7 @@ GuiTheme_FlatChromeHwnd(hwnd) {
     }
     try DllCall("uxtheme\SetWindowTheme", "ptr", hwnd, "wstr", "", "wstr", "")
 }
+
+#Include GdipUiHelpers.ahk
+#Include FlatButtonGdip.ahk
+#Include ToggleGdip.ahk

@@ -21,17 +21,24 @@ A_MaxHotkeysPerInterval := 9999
 global __Version := "0.2.8"
 
 #Include <RunWithAdministrator>
+; 在 UAC 判定之后：最终驻留进程（含已提升管理员的重启实例）设为高优先级。HIGH 对本进程一般无需管理员。
+try ProcessSetPriority("High")
 #Include <Keys>
 #Include <JSON>
 #Include <Time>
 #Include <GetPressKey>
+#Include <GdiPlusSession>
 #Include <GuiTheme>
 #Include ./core/SendIP.ahk
-#Include ./core/KeyConvert.ahk
+#Include ./core/GetKeycode.ahk
 #Include ./core/Config.ahk
 EnsureConfigInitialized()
+#Include ./core/SessionState.ahk
+SessionState.InitFromLastPreset()
+#Include ./core/PresetExFeatures.ahk
+#Include ./core/GameContext.ahk
 #Include ./core/KeyRouter.ahk
-#Include ./core/Scripts.ahk
+#Include ./core/AutoFireController.ahk
 #Include ./core/PresetRecognition.ahk
 #Include ./gui/Main.ahk
 #Include ./gui/QuickSwitch.ahk
@@ -48,8 +55,8 @@ EnsureConfigInitialized()
 #Include ./ex/ExJianZong.ahk
 #Include ./gui/ex/AutoRun.ahk
 #Include ./ex/ExAutoRun.ahk
-#Include .\gui\ex\Combo.ahk
-#Include .\ex\ExCombo.ahk
+#Include ./gui/ex/Combo.ahk
+#Include ./ex/ExCombo.ahk
 #Include ./gui/PresetAutoSwitch.ahk
 #Include ./gui/ex/PresetSkillIcon.ahk
 
@@ -85,9 +92,11 @@ Exit(*) {
 OnExit(CleanupOnExit)
 CleanupOnExit(*) {
     try SingleInstance_ReleaseMutex()
+    try GdiPlusSession.Shutdown()
     try PresetRecognition_DisableAllHotkeys()
     try KeyRouter.StopFocusWatcher()
     try StopAutoFire()
+    try GameContext.Shutdown()
     global _MainProcessTimePeriodActive
     if (_MainProcessTimePeriodActive) {
         try RestoreSystemTimeLimit()
@@ -95,14 +104,10 @@ CleanupOnExit(*) {
     }
 }
 
-global _AutoFireEnableKeys := []
-global _AutoFireMainHotkeyRegs := []
-global _NowSelectPreset := LoadLastPreset()
-
+GameContext.Init()
 PresetRecognition_UpdateHotkeys()
 
 ShowGuiMain()
-SetDNFWindowClass()
 KeyRouter.StartFocusWatcher()
 if (_AutoStart) {
     HideGuiMain()

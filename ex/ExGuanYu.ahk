@@ -3,18 +3,25 @@
 global _GuanYuShotKeyCode := ""
 global _GuanYuDelayMs := 300
 global _GuanYuPendingTimerByPressKey := Map()
+global _GuanYuHotkeySubs := []
 
 GuanYuUnregisterHotkeys() {
-    global _GuanYuPendingTimerByPressKey
+    global _GuanYuPendingTimerByPressKey, _GuanYuHotkeySubs
     for pressKey, fn in _GuanYuPendingTimerByPressKey {
         try SetTimer(fn, 0)
     }
     _GuanYuPendingTimerByPressKey := Map()
+    for sub in _GuanYuHotkeySubs {
+        KeyRouter.UnsubscribeDown(sub.id, sub.downFn)
+        KeyRouter.UnsubscribeUp(sub.id, sub.upFn)
+    }
+    _GuanYuHotkeySubs := []
 }
 
 GuanYuRegisterHotkeys() {
-    global _GuanYuShotKeyCode, _GuanYuDelayMs
-    if !MainCheckboxOn("GuanYu") {
+    global _GuanYuShotKeyCode, _GuanYuDelayMs, _GuanYuHotkeySubs
+    GuanYuUnregisterHotkeys()
+    if !PresetExFeatures.IsOn("GuanYu") {
         return
     }
     presetName := GetNowSelectPreset()
@@ -24,11 +31,17 @@ GuanYuRegisterHotkeys() {
     if !LoadPreset(presetName, "GuanYuState", false) {
         return
     }
-    shotKey := LoadPresetSafe(presetName, "GuanYuShotKey")
+    shotKey := GetKeycode.CanonMainKey(LoadPresetSafe(presetName, "GuanYuShotKey"))
     if (shotKey = "") {
         return
     }
-    skillKeys := GuanYuLoadKeys(presetName)
+    skillKeys := []
+    for sk in GuanYuLoadKeys(presetName) {
+        c := GetKeycode.CanonMainKey(sk)
+        if (c != "") {
+            skillKeys.Push(c)
+        }
+    }
     skillKeys := GuanYuUniqueSkillKeysByPressKey(skillKeys)
     if (skillKeys.Length = 0) {
         return
@@ -39,7 +52,10 @@ GuanYuRegisterHotkeys() {
     } else if (delayMs > 500) {
         delayMs := 500
     }
-    _GuanYuShotKeyCode := Key2NoVkSC(shotKey)
+    _GuanYuShotKeyCode := GetKeycode.ToSendToken(shotKey)
+    if (_GuanYuShotKeyCode = "") {
+        return
+    }
     _GuanYuDelayMs := delayMs
 
     loop skillKeys.Length {
@@ -50,13 +66,21 @@ GuanYuRegisterHotkeys() {
         if (sk = "") {
             continue
         }
-        pressKey := Key2PressKey(sk)
+        pressKey := GetKeycode.ToProbeKey(sk)
         if (pressKey = "") {
             continue
         }
-        id := AutoFireMainHotkeyIdFromOrigin(sk)
-        KeyRouter.SubscribeDown(id, GuanYuOnSkillDown.Bind(pressKey))
-        KeyRouter.SubscribeUp(id, GuanYuOnSkillUp.Bind(pressKey))
+        id := GetKeycode.ToRouterId(sk)
+        downFn := GuanYuOnSkillDown.Bind(pressKey)
+        upFn := GuanYuOnSkillUp.Bind(pressKey)
+        if !KeyRouter.SubscribeDown(id, downFn) {
+            continue
+        }
+        if !KeyRouter.SubscribeUp(id, upFn) {
+            KeyRouter.UnsubscribeDown(id, downFn)
+            continue
+        }
+        _GuanYuHotkeySubs.Push({ id: id, downFn: downFn, upFn: upFn })
     }
 }
 
@@ -75,7 +99,7 @@ GuanYuUniqueSkillKeysByPressKey(skillKeys) {
         if (sk = "") {
             continue
         }
-        pk := Key2PressKey(sk)
+        pk := GetKeycode.ToProbeKey(sk)
         if (pk = "") || seen.Has(pk) {
             continue
         }
@@ -105,7 +129,7 @@ GuanYuExecuteDelayed(pressKey, *) {
     if _GuanYuPendingTimerByPressKey.Has(pressKey) {
         _GuanYuPendingTimerByPressKey.Delete(pressKey)
     }
-    if !WinActive("ahk_group DNF") {
+    if !GameContext.IsActiveNow() {
         return
     }
     try {

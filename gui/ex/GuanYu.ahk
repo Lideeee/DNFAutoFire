@@ -18,7 +18,7 @@ GuiTheme_FlatBtnCompact(gGuanYuGui, "x76 y214 w54 h24", "删除", GuanYuDeleteKe
 ; 标签同宽 w100 容纳「手动延迟(ms)」；两枚 Edit 同 x234、同 w56，仅 y 不同
 gGuanYuGui.Add("Text", "x128 y36 w100 h24 +0x200", "猛攻发射键")
 gGuanYuCtrls["GuanYuShotKey"] := gGuanYuGui.Add("Edit", "vGuanYuShotKey x234 y36 w56 h24 +ReadOnly -WantCtrlA -E0x200 Border")
-RegisterEditPressKeyCapture(gGuanYuCtrls["GuanYuShotKey"])
+RegisterEditPressKeyCapture(gGuanYuCtrls["GuanYuShotKey"], GetKeycode.AfterCaptureEdit.Bind(gGuanYuCtrls["GuanYuShotKey"]))
 gGuanYuGui.Add("Text", "x128 y68 w100 h24 +0x200", "手动延迟(ms)")
 gGuanYuCtrls["GuanYuDelay"] := gGuanYuGui.Add("Edit", "vGuanYuDelay x234 y68 w56 h24 +Number -E0x200 Border")
 GuiTheme_HRule(gGuanYuGui, 14, 252, 280)
@@ -59,8 +59,12 @@ GuanYuHelp(*) {
 
 GuanYuAddKey(*) {
     global __GuanYuSkillKeys
-    key := GetPressKey()
+    raw := GetPressKey()
+    key := GetKeycode.CanonMainKey(raw)
     if (key = "") {
+        if (raw != "") {
+            MsgBox("仅支持主连发键盘上的键。",, "Icon!")
+        }
         return
     }
     if IsValueInArray(key, __GuanYuSkillKeys) {
@@ -147,14 +151,21 @@ GuanYuSaveConfig() {
 GuanYuLoadConfig() {
     global __GuanYuSkillKeys
     shotKey := LoadPreset(GetNowSelectPreset(), "GuanYuShotKey", "Space")
+    cShot := GetKeycode.CanonMainKey(Trim(shotKey))
     delay := Round(LoadPreset(GetNowSelectPreset(), "GuanYuDelay", 300) + 0)
     if (delay < 20) {
         delay := 20
     } else if (delay > 500) {
         delay := 500
     }
-    __GuanYuSkillKeys := GuanYuLoadKeys(GetNowSelectPreset())
+    __GuanYuSkillKeys := []
+    for sk in GuanYuLoadKeys(GetNowSelectPreset()) {
+        c := GetKeycode.CanonMainKey(sk)
+        if (c != "") {
+            __GuanYuSkillKeys.Push(c)
+        }
+    }
     GuanYuChangeListGui(__GuanYuSkillKeys)
-    GuanYuGetCtrl("GuanYuShotKey").Text := shotKey
+    GuanYuGetCtrl("GuanYuShotKey").Text := cShot != "" ? cShot : "Space"
     GuanYuGetCtrl("GuanYuDelay").Text := delay
 }
