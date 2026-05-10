@@ -9,15 +9,15 @@ GuiTheme_Apply(gAutoRunGui)
 gAutoRunGui.OnEvent("Escape", AutoRunGuiEscape)
 gAutoRunGui.OnEvent("Close", AutoRunGuiClose)
 
-gAutoRunGui.Add("Text", "x14 y48 w72 h26 +0x200", ExText.AutoRunLeftLabel())
-gAutoRunCtrls["AutoRunLeftKey"] := gAutoRunGui.Add("Edit", "vAutoRunLeftKey x94 y48 w168 h24 +ReadOnly -WantCtrlA -E0x200 Border")
+gAutoRunGui.Add("Text", "x16 y54 w72 h26 +0x200", ExText.AutoRunLeftLabel())
+gAutoRunCtrls["AutoRunLeftKey"] := gAutoRunGui.Add("Edit", "vAutoRunLeftKey x96 y54 w168 h24 +ReadOnly -WantCtrlA -E0x200 Border")
 RegisterEditPressKeyCapture(gAutoRunCtrls["AutoRunLeftKey"], GetKeycode.AfterCaptureEdit.Bind(gAutoRunCtrls["AutoRunLeftKey"]))
-gAutoRunGui.Add("Text", "x14 y88 w72 h26 +0x200", ExText.AutoRunRightLabel())
-gAutoRunCtrls["AutoRunRightKey"] := gAutoRunGui.Add("Edit", "vAutoRunRightKey x94 y88 w168 h24 +ReadOnly -WantCtrlA -E0x200 Border")
+gAutoRunGui.Add("Text", "x16 y94 w72 h26 +0x200", ExText.AutoRunRightLabel())
+gAutoRunCtrls["AutoRunRightKey"] := gAutoRunGui.Add("Edit", "vAutoRunRightKey x96 y94 w168 h24 +ReadOnly -WantCtrlA -E0x200 Border")
 RegisterEditPressKeyCapture(gAutoRunCtrls["AutoRunRightKey"], GetKeycode.AfterCaptureEdit.Bind(gAutoRunCtrls["AutoRunRightKey"]))
-GuiTheme_HRule(gAutoRunGui, 14, 132, 362)
-GuiTheme_FlatBtn(gAutoRunGui, "x14 y142 w362 h36", ExText.SaveButton(), AutoRunSave, true)
-GuiTheme_FlatBtnSmall(gAutoRunGui, "x350 y14 w26 h26", GuiText.HelpButton(), AutoRunHelp)
+GuiTheme_HRule(gAutoRunGui, 16, 138, 358)
+GuiTheme_FlatBtn(gAutoRunGui, "x16 y144 w358 h36", ExText.SaveButton(), AutoRunSave, true)
+GuiTheme_FlatBtnSmall(gAutoRunGui, "x348 y16 w26 h26", GuiText.HelpButton(), AutoRunHelp)
 
 AutoRunGetCtrl(name) {
     global gAutoRunCtrls
@@ -25,7 +25,7 @@ AutoRunGetCtrl(name) {
 }
 
 ShowGuiAutoRun(*) {
-    ExWindowHost.ShowOwned(gAutoRunGui, ExText.AutoRunTitle(), "w390 h196")
+    ExWindowHost.ShowOwnedFit(gAutoRunGui, ExText.AutoRunTitle())
     AutoRunLoadConfig()
 }
 

@@ -7,7 +7,7 @@ class MainActionButtonBuilder {
         w := MainLayout.ActionButtonWidth()
         h := MainLayout.ActionButtonHeight()
         gMainCtrls["MainSetting"] := GuiTheme_FlatTextBtn(gMainGui, "vMainSetting x" . x . " y" . MainLayout.ActionButtonYTop() . " w" . w . " h" . h, MainWindowText.SettingButton(), MainSetting)
-        gMainCtrls["MainCheckUpdate"] := GuiTheme_FlatTextBtn(gMainGui, "vMainCheckUpdate x" . x . " y" . MainLayout.ActionButtonYMiddle() . " w" . w . " h" . h, MainWindowText.CheckUpdateButton(), MainCheckUpdate)
+        gMainCtrls["MainAutoPreset"] := GuiTheme_FlatTextBtn(gMainGui, "vMainAutoPreset x" . x . " y" . MainLayout.ActionButtonYMiddle() . " w" . w . " h" . h, MainWindowText.AutoPresetButton(), MainAutoPreset)
         gMainCtrls["MainStart"] := GuiTheme_FlatTextBtn(gMainGui, "vMainStart x" . x . " y" . MainLayout.ActionButtonYBottom() . " w" . w . " h" . h, MainWindowText.StartButton(), MainStart, true)
     }
 }

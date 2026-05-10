@@ -52,28 +52,11 @@ class MainPresetPanel {
     }
 
     static SetListBox(ctrl, listPipe) {
-        ctrl.Delete()
-        for item in StrSplit(listPipe, "|") {
-            if (item != "") {
-                ctrl.Add([item])
-            }
-        }
+        GuiTheme_SetListBoxItemsFromPipe(ctrl, listPipe)
     }
 
     static SetListBoxFromArray(ctrl, items) {
-        ctrl.Delete()
-        if !IsObject(items) {
-            return
-        }
-        loop items.Length {
-            if !items.Has(A_Index) {
-                continue
-            }
-            item := items[A_Index]
-            if (item != "") {
-                ctrl.Add([item])
-            }
-        }
+        GuiTheme_SetListBoxItems(ctrl, items)
     }
 
     static PresetCountFromPipe(pipe) {
@@ -130,6 +113,7 @@ class MainPresetPanel {
             AutoFireController.ChangePreset(presetName)
             presetNameCtrl.Text := presetName
         }
+        try AutoPresetSettingsSyncPresetList()
     }
 
     static OnPresetSelectionChange(*) {

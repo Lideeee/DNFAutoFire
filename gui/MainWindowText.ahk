@@ -41,16 +41,20 @@ class MainWindowText {
         return "连发间隔(ms)"
     }
 
-    static PresetSkillButton() {
-        return "自动识别配置"
+    static PressDurationLabel() {
+        return "按下保持时间(ms)"
     }
 
     static SettingButton() {
         return "软件设置"
     }
 
-    static CheckUpdateButton() {
-        return "检查更新"
+    static PresetSkillButton() {
+        return "识别配置设置"
+    }
+
+    static AutoPresetButton() {
+        return "自动识别"
     }
 
     static StartButton() {

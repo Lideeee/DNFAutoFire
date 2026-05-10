@@ -328,11 +328,15 @@ CalibrateIconMatches() {
 
 ; 更新当前预设的技能图标参考图。
 PresetSkillIcon_UpdateCurrent() {
+    return PresetSkillIcon_UpdateForPreset(GetNowSelectPreset())
+}
+
+PresetSkillIcon_UpdateForPreset(presetName) {
     r := ParseAutoPresetRegion()
     if !r.Has("w") {
         throw Error("请先选择技能图标区域，再截取技能图标。")
     }
-    name := GetNowSelectPreset()
+    name := Trim(presetName)
     if (name = "") {
         throw Error("当前没有选中的配置。")
     }

@@ -45,6 +45,7 @@ class AutoFireService {
     static StartSession() {
         presetName := SessionState.GetCurrentPreset()
         mainIntervalMs := PresetManager.NormalizeInterval(LoadPreset(presetName, "MainAutoFireInterval", PresetManager.DefaultAutoFireInterval))
+        pressDurationMs := PresetManager.NormalizePressDuration(LoadPreset(presetName, "MainAutoFirePressDuration", PresetManager.DefaultAutoFirePressDuration))
         keyIntervalOverrides := PresetManager.LoadKeyIntervalOverrides(presetName)
         MainAutoFireHotkeys_Stop()
         FeatureModuleRegistry.StopAllModules()
@@ -52,7 +53,7 @@ class AutoFireService {
         for keyName in SessionState.AutoFireEnableKeys {
             AutoFireController.UseBlockingOriginalKeyMode(keyName)
         }
-        MainAutoFireHotkeys_Start(mainIntervalMs, keyIntervalOverrides)
+        MainAutoFireHotkeys_Start(mainIntervalMs, keyIntervalOverrides, pressDurationMs)
         Sleep(10)
         this.StartFeatureModules()
         AutoFireController.UpdateTrayRunningIcon(true)
@@ -241,7 +242,7 @@ MainAutoFireHotkeys_Stop() {
     SessionState.AutoFireMainHotkeyRegs := []
 }
 
-MainAutoFireHotkeys_Start(defaultIntervalMs, keyIntervalOverrides := unset) {
+MainAutoFireHotkeys_Start(defaultIntervalMs, keyIntervalOverrides := unset, pressDurationMs := 8) {
     MainAutoFireHotkeys_Stop()
     if !IsSet(keyIntervalOverrides) || !IsObject(keyIntervalOverrides) {
         keyIntervalOverrides := Map()
@@ -264,7 +265,7 @@ MainAutoFireHotkeys_Start(defaultIntervalMs, keyIntervalOverrides := unset) {
         if (routerId = "" || sendToken = "" || probeKey = "") {
             continue
         }
-        tickFn := MainAutoFireHotkeys_Tick.Bind(probeKey, sendToken)
+        tickFn := MainAutoFireHotkeys_Tick.Bind(probeKey, sendToken, pressDurationMs)
         downFn := MainAutoFireHotkeys_OnKeyDown.Bind(tickFn, effectiveIntervalMs)
         upFn := MainAutoFireHotkeys_OnKeyUp.Bind(tickFn)
         if !KeyRouter.SubscribeDown(routerId, downFn) {
@@ -283,7 +284,7 @@ MainAutoFireHotkeys_Start(defaultIntervalMs, keyIntervalOverrides := unset) {
     }
 }
 
-MainAutoFireHotkeys_Tick(probeKey, sendToken) {
+MainAutoFireHotkeys_Tick(probeKey, sendToken, pressDurationMs) {
     if !GameContext.IsActiveNow() {
         return
     }
@@ -296,7 +297,7 @@ MainAutoFireHotkeys_Tick(probeKey, sendToken) {
     }
     keyBusyMap[probeKey] := true
     try {
-        SendIP(sendToken)
+        SendIP(sendToken, pressDurationMs)
     } finally {
         keyBusyMap[probeKey] := false
     }

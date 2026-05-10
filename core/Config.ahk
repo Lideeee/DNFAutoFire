@@ -242,6 +242,7 @@ class ConfigStore {
         this.SavePresetField(dn, "AutoRunState", false)
         this.SavePresetField(dn, "ComboState", false)
         this.SavePresetField(dn, "MainAutoFireInterval", 20)
+        this.SavePresetField(dn, "MainAutoFirePressDuration", 8)
         this.SavePresetField(dn, "AutoRunLeftKey", "Left")
         this.SavePresetField(dn, "AutoRunRightKey", "Right")
         this.SavePresetField(dn, "ComboTriggerKey", "")

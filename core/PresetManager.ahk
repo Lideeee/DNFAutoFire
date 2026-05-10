@@ -12,6 +12,7 @@ class PresetManager {
     )
 
     static DefaultAutoFireInterval := 20
+    static DefaultAutoFirePressDuration := 8
 
     static DefaultPresetFields() {
         return Map(
@@ -24,6 +25,7 @@ class PresetManager {
             "AutoRunState", false,
             "ComboState", false,
             "MainAutoFireInterval", this.DefaultAutoFireInterval,
+            "MainAutoFirePressDuration", this.DefaultAutoFirePressDuration,
             "ComboTriggerKey", "",
             "ComboLoopMode", false,
             "ComboSkills", "",
@@ -84,6 +86,7 @@ class PresetManager {
         return {
             featureStates: featureStates,
             autoFireInterval: this.NormalizeInterval(LoadPreset(presetName, "MainAutoFireInterval", this.DefaultAutoFireInterval)),
+            autoFirePressDuration: this.NormalizePressDuration(LoadPreset(presetName, "MainAutoFirePressDuration", this.DefaultAutoFirePressDuration)),
             keyIntervalOverrides: LoadPresetKeyIntervalOverrides(presetName),
             autoFireKeys: LoadPresetKeys(presetName)
         }
@@ -112,6 +115,24 @@ class PresetManager {
 
     static SaveAutoFireInterval(presetName, value) {
         SavePreset(presetName, "MainAutoFireInterval", this.NormalizeInterval(value))
+    }
+
+    static NormalizePressDuration(value, defaultValue := unset) {
+        if !IsSet(defaultValue) {
+            defaultValue := this.DefaultAutoFirePressDuration
+        }
+        raw := Trim(value "")
+        n := Round((raw = "" ? defaultValue : raw) + 0)
+        if (n < 0) {
+            n := 0
+        } else if (n > 200) {
+            n := 200
+        }
+        return n
+    }
+
+    static SaveAutoFirePressDuration(presetName, value) {
+        SavePreset(presetName, "MainAutoFirePressDuration", this.NormalizePressDuration(value))
     }
 
     static LoadKeyIntervalOverrides(presetName := unset) {

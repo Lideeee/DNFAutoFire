@@ -36,7 +36,7 @@ GuiTheme_FlatBtnCompact(gui, opts, text, handler) {
 
 ; 主界面与各 EX 子窗口统一：细边框、白底、-E0x200、-VScroll（隐藏滚动条）；滚轮由 GuiTheme_RegisterListBoxWheel 处理。
 GuiTheme_MainCfgPresetListOpts(vName, x, y, w, h) {
-    return "v" vName " x" x " y" y " w" w " h" h " -E0x200 Border BackgroundFFFFFF -VScroll"
+    return "v" vName " x" x " y" y " w" w " h" h " -E0x200 +0x100 Border BackgroundFFFFFF -VScroll"
 }
 
 GuiTheme_RegisterListBoxWheel(ctrl) {
@@ -53,10 +53,39 @@ GuiTheme_RegisterListBoxWheel(ctrl) {
     }
 }
 
-GuiTheme_AddMainStyleListBox(gui, vName, x, y, w, h) {
+GuiTheme_AddListBox(gui, vName, x, y, w, h) {
     lb := gui.Add("ListBox", GuiTheme_MainCfgPresetListOpts(vName, x, y, w, h), [])
     GuiTheme_RegisterListBoxWheel(lb)
     return lb
+}
+
+GuiTheme_SetListBoxItems(ctrl, items := unset) {
+    if !IsObject(ctrl) {
+        return
+    }
+    ctrl.Delete()
+    if !IsSet(items) || !IsObject(items) {
+        return
+    }
+    loop items.Length {
+        if !items.Has(A_Index) {
+            continue
+        }
+        item := items[A_Index]
+        if (item != "") {
+            ctrl.Add([item])
+        }
+    }
+}
+
+GuiTheme_SetListBoxItemsFromPipe(ctrl, listPipe) {
+    items := []
+    for item in StrSplit(listPipe, "|") {
+        if (item != "") {
+            items.Push(item)
+        }
+    }
+    GuiTheme_SetListBoxItems(ctrl, items)
 }
 
 GuiTheme__ListBoxOnMouseWheel(wParam, lParam, msg, hwnd) {
@@ -157,6 +186,74 @@ GuiTheme_FlatChromeHwnd(hwnd) {
         return
     }
     try DllCall("uxtheme\SetWindowTheme", "ptr", hwnd, "wstr", "", "wstr", "")
+}
+
+GuiTheme_ContentMaxRight(gui, includeHidden := true) {
+    maxRight := 0
+    if !IsObject(gui) {
+        return maxRight
+    }
+    for ctrl in gui {
+        if !IsObject(ctrl) {
+            continue
+        }
+        if (!includeHidden) {
+            try {
+                if !ctrl.Visible {
+                    continue
+                }
+            } catch {
+            }
+        }
+        try ctrl.GetPos(&x, &y, &w, &h)
+        catch {
+            continue
+        }
+        right := x + w
+        if (right > maxRight) {
+            maxRight := right
+        }
+    }
+    return maxRight
+}
+
+GuiTheme_ContentMaxBottom(gui, includeHidden := true) {
+    maxBottom := 0
+    if !IsObject(gui) {
+        return maxBottom
+    }
+    for ctrl in gui {
+        if !IsObject(ctrl) {
+            continue
+        }
+        if (!includeHidden) {
+            try {
+                if !ctrl.Visible {
+                    continue
+                }
+            } catch {
+            }
+        }
+        try ctrl.GetPos(&x, &y, &w, &h)
+        catch {
+            continue
+        }
+        bottom := y + h
+        if (bottom > maxBottom) {
+            maxBottom := bottom
+        }
+    }
+    return maxBottom
+}
+
+GuiTheme_ShowFit(gui, extraOpts := "", rightPad := 16, bottomPad := 16, minW := 0, minH := 0, includeHidden := true) {
+    w := Max(minW, GuiTheme_ContentMaxRight(gui, includeHidden) + rightPad)
+    h := Max(minH, GuiTheme_ContentMaxBottom(gui, includeHidden) + bottomPad)
+    opts := Trim(extraOpts)
+    if (opts != "") {
+        opts .= " "
+    }
+    gui.Show(opts . "w" w . " h" h)
 }
 
 #Include GdipUiHelpers.ahk

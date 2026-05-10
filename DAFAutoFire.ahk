@@ -46,6 +46,7 @@ SessionState.InitFromLastPreset()
 #Include ./gui/main/Main.ahk
 #Include ./gui/dialogs/QuickSwitch.ahk
 #Include ./gui/dialogs/Setting.ahk
+#Include ./gui/ex/autoPreset/AutoPresetSettings.ahk
 #Include ./gui/ExText.ahk
 #Include ./gui/ex/LvRen.ahk
 #Include ./ex/ExLvRen.ahk
@@ -61,7 +62,7 @@ SessionState.InitFromLastPreset()
 #Include ./ex/ExAutoRun.ahk
 #Include ./gui/ex/Combo.ahk
 #Include ./ex/ExCombo.ahk
-#Include ./gui/dialogs/PresetAutoSwitch.ahk
+#Include ./gui/ex/autoPreset/PresetAutoSwitch.ahk
 #Include ./gui/ex/PresetSkillIcon.ahk
 #Include ./core/AppBootstrap.ahk
 

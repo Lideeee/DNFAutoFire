@@ -1,6 +1,6 @@
-﻿#Requires AutoHotkey v2.0
+#Requires AutoHotkey v2.0
 
-class PresetAutoSwitchController {
+class PresetAutoCtrl {
     static OpenSkillRegionPick(*) {
         PresetRegionPickOpen("skill")
     }
@@ -13,9 +13,8 @@ class PresetAutoSwitchController {
             gPresetAutoGui.Opt("+Owner" gMainGui.Hwnd)
         }
         gPresetAutoGui.Title := GuiText.PresetAutoTitle()
-        PresetAutoGetCtrl("AutoPresetHotkey").Text := Trim(LoadConfig("AutoPresetHotkey", ""))
         this.RefreshCalibratePreview()
-        gPresetAutoGui.Show("w240 h368")
+        GuiTheme_ShowFit(gPresetAutoGui)
     }
 
     static Hide() {
@@ -27,12 +26,6 @@ class PresetAutoSwitchController {
     static SaveAndClose(*) {
         PresetRegionPickCommitIfOpen()
         this.Hide()
-    }
-
-    static AfterHotkeyCapture(key) {
-        hk := Trim(key)
-        SaveConfig("AutoPresetHotkey", hk)
-        PresetRecognition_UpdateHotkeys()
     }
 
     static DeleteCalibrateIcon(*) {

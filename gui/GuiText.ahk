@@ -54,11 +54,23 @@ class GuiText {
     }
 
     static SettingAutoPresetButton() {
-        return "自动识别设置"
+        return "识别区域设置"
     }
 
     static SettingAutoPresetHelp() {
         return "1. 未识别到自动切换到首个配置`n2. 游戏窗口位置、大小、分辨率变化，都需要重新截取识别图像。（或调整回原来的窗口大小和位置）"
+    }
+
+    static AutoPresetSettingsTitle() {
+        return "自动识别"
+    }
+
+    static AutoPresetPresetListLabel() {
+        return "配置列表"
+    }
+
+    static AutoPresetSelectedPresetLabel() {
+        return "当前识别配置："
     }
 
     static SaveButton() {
@@ -94,7 +106,7 @@ class GuiText {
     }
 
     static PresetAutoTitle() {
-        return "自动切换预设设置"
+        return "识别区域设置"
     }
 
     static PresetAutoHotkeyLabel() {

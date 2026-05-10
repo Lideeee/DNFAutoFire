@@ -17,7 +17,7 @@ class QuickSwitchController {
         global gQuickSwitchGui
         HideGuiMain()
         gQuickSwitchGui.Title := GuiText.QuickSwitchTitle()
-        gQuickSwitchGui.Show("w268 h260")
+        GuiTheme_ShowFit(gQuickSwitchGui, "", 12, 18)
         nowSelectPreset := GetNowSelectPreset()
         presetList := LoadAllPresetString()
         ctrl := QuickSwitchGetCtrl("QuickSwitchList")

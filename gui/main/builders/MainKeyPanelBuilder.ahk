@@ -3,7 +3,7 @@
 class MainKeyPanelBuilder {
     static Build() {
         gMainGui.SetFont("s10 c" GuiTheme_Hint, GuiTheme_Face)
-        gMainGui.Add("Text", "x16 y10 w" MainKeyLayoutData.KeyboardWidth() " h20 +0x200", MainWindowText.KeyHelp())
+        gMainGui.Add("Text", "x16 y16 w" MainKeyLayoutData.KeyboardWidth() " h14 +0x200", MainWindowText.KeyHelp())
 
         for item in MainKeyLayoutData.GetRows() {
             name := item[1], pos := item[2], label := item.Length >= 3 ? item[3] : name

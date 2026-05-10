@@ -10,16 +10,16 @@ GuiTheme_Apply(gPetSkillGui)
 gPetSkillGui.OnEvent("Escape", PetSkillGuiEscape)
 gPetSkillGui.OnEvent("Close", PetSkillGuiClose)
 
-gPetSkillGui.Add("Text", "x14 y10 w100 h18 +0x200", ExText.PetSkillListLabel())
-GuiTheme_FlatBtnSmall(gPetSkillGui, "x116 y10 w18 h18", GuiText.HelpButton(), PetSkillHelp)
-gPetSkillCtrls["PetSkillKeysListBox"] := GuiTheme_AddMainStyleListBox(gPetSkillGui, "PetSkillKeysListBox", 14, 32, 108, 176)
-GuiTheme_FlatBtnCompact(gPetSkillGui, "x14 y214 w54 h24", ExText.AddButton(), PetSkillAddKey)
-GuiTheme_FlatBtnCompact(gPetSkillGui, "x76 y214 w54 h24", ExText.DeleteButton(), PetSkillDeleteKey)
-gPetSkillGui.Add("Text", "x128 y36 w100 h24 +0x200", ExText.PetSkillShotKeyLabel())
-gPetSkillCtrls["PetSkillShotKey"] := gPetSkillGui.Add("Edit", "vPetSkillShotKey x234 y36 w56 h24 +ReadOnly -WantCtrlA -E0x200 Border")
+gPetSkillGui.Add("Text", "x16 y16 w100 h18 +0x200", ExText.PetSkillListLabel())
+GuiTheme_FlatBtnSmall(gPetSkillGui, "x118 y16 w18 h18", GuiText.HelpButton(), PetSkillHelp)
+gPetSkillCtrls["PetSkillKeysListBox"] := GuiTheme_AddListBox(gPetSkillGui, "PetSkillKeysListBox", 16, 38, 108, 176)
+GuiTheme_FlatBtnCompact(gPetSkillGui, "x16 y220 w54 h24", ExText.AddButton(), PetSkillAddKey)
+GuiTheme_FlatBtnCompact(gPetSkillGui, "x78 y220 w54 h24", ExText.DeleteButton(), PetSkillDeleteKey)
+gPetSkillGui.Add("Text", "x130 y42 w100 h24 +0x200", ExText.PetSkillShotKeyLabel())
+gPetSkillCtrls["PetSkillShotKey"] := gPetSkillGui.Add("Edit", "vPetSkillShotKey x236 y42 w56 h24 +ReadOnly -WantCtrlA -E0x200 Border")
 RegisterEditPressKeyCapture(gPetSkillCtrls["PetSkillShotKey"], GetKeycode.AfterCaptureEdit.Bind(gPetSkillCtrls["PetSkillShotKey"]))
-GuiTheme_HRule(gPetSkillGui, 14, 252, 280)
-GuiTheme_FlatBtn(gPetSkillGui, "x78 y260 w152 h34", ExText.SaveButton(), PetSkillSave, true)
+GuiTheme_HRule(gPetSkillGui, 16, 254, 276)
+GuiTheme_FlatBtn(gPetSkillGui, "x78 y262 w152 h34", ExText.SaveButton(), PetSkillSave, true)
 
 PetSkillGetCtrl(name) {
     global gPetSkillCtrls
@@ -27,7 +27,7 @@ PetSkillGetCtrl(name) {
 }
 
 ShowGuiPetSkill(*) {
-    ExWindowHost.ShowOwned(gPetSkillGui, ExText.PetSkillTitle(), "w308 h312")
+    ExWindowHost.ShowOwnedFit(gPetSkillGui, ExText.PetSkillTitle())
     PetSkillLoadConfig()
 }
 

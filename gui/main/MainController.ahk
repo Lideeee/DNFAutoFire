@@ -5,7 +5,7 @@ class MainController {
         global gMainGui
         try PresetRecognition_CancelPending()
         gMainGui.Title := MainWindowText.Title()
-        gMainGui.Show("w" . MainLayout.GuiWidth() . " h" . MainLayout.GuiHeight())
+        GuiTheme_ShowFit(gMainGui, "", MainLayout.StandardMargin(), MainLayout.StandardMargin(), MainLayout.GuiWidth(), MainLayout.GuiHeight())
         MainLoadAllPreset()
         this.SyncQuickSwitchFromConfig()
         SetTimer(MainMutedLinkPoll, 100)
@@ -27,7 +27,7 @@ class MainController {
         global gMainGui
         gMainGui.Opt("-Disabled")
         gMainGui.Title := MainWindowText.TitleWithVersion(__Version)
-        gMainGui.Show("w" . MainLayout.GuiWidth() . " h" . MainLayout.GuiHeightRunning())
+        GuiTheme_ShowFit(gMainGui, "", MainLayout.StandardMargin(), MainLayout.StandardMargin() + 8, MainLayout.GuiWidth(), MainLayout.GuiHeightRunning())
         MainExSwitchPaintAll()
         SetTimer(MainMutedLinkPoll, 100)
     }
@@ -51,12 +51,8 @@ class MainController {
         ShowGuiSettingAbout()
     }
 
-    static CheckUpdate(*) {
-        postUrl := "https://bbs.colg.cn/forum.php?mod=viewthread&tid=9593722"
-        try Run(postUrl)
-        catch {
-            MsgBox(MainWindowText.OpenLinkFailed(postUrl),, "Icon!")
-        }
+    static OpenAutoPreset(*) {
+        ShowGuiAutoPresetSettings()
     }
 
     static SaveMainViewState() {
@@ -70,6 +66,7 @@ class MainController {
         }
         PresetManager.SaveFeatureStates(presetName, featureStates)
         PresetManager.SaveAutoFireInterval(presetName, this.NormalizeAutoFireInterval())
+        PresetManager.SaveAutoFirePressDuration(presetName, this.NormalizeAutoFirePressDuration())
     }
 
     static LoadMainViewState() {
@@ -78,6 +75,7 @@ class MainController {
             MainGetCtrl(featureName).Value := enabled
         }
         MainGetCtrl("MainAutoFireInterval").Text := state.autoFireInterval
+        MainGetCtrl("MainAutoFirePressDuration").Text := state.autoFirePressDuration
         MainRefreshAllKeyAppearances()
         MainExSwitchPaintAll()
     }
@@ -108,6 +106,34 @@ class MainController {
             return
         }
         PresetManager.SaveAutoFireInterval(presetName, this.NormalizeAutoFireInterval())
+    }
+
+    static NormalizeAutoFirePressDuration() {
+        ctrl := MainGetCtrl("MainAutoFirePressDuration")
+        n := PresetManager.NormalizePressDuration(ctrl.Text)
+        ctrl.Text := n
+        return n
+    }
+
+    static SaveAutoFirePressDuration(*) {
+        presetName := GetNowSelectPreset()
+        if (presetName = "") {
+            return
+        }
+        ctrl := MainGetCtrl("MainAutoFirePressDuration")
+        raw := Trim(ctrl.Text)
+        if (raw = "") {
+            return
+        }
+        PresetManager.SaveAutoFirePressDuration(presetName, raw)
+    }
+
+    static CommitAutoFirePressDuration(*) {
+        presetName := GetNowSelectPreset()
+        if (presetName = "") {
+            return
+        }
+        PresetManager.SaveAutoFirePressDuration(presetName, this.NormalizeAutoFirePressDuration())
     }
 
     static SaveExToggle(*) {

@@ -10,16 +10,16 @@ GuiTheme_Apply(gLvRenGui)
 gLvRenGui.OnEvent("Escape", LvRenGuiEscape)
 gLvRenGui.OnEvent("Close", LvRenGuiClose)
 
-gLvRenGui.Add("Text", "x14 y10 w100 h18 +0x200", ExText.LvRenListLabel())
-GuiTheme_FlatBtnSmall(gLvRenGui, "x116 y10 w18 h18", GuiText.HelpButton(), LvRenHelp)
-gLvRenCtrls["LvRenKeysListBox"] := GuiTheme_AddMainStyleListBox(gLvRenGui, "LvRenKeysListBox", 14, 32, 108, 176)
-GuiTheme_FlatBtnCompact(gLvRenGui, "x14 y214 w54 h24", ExText.AddButton(), LvRenAddKey)
-GuiTheme_FlatBtnCompact(gLvRenGui, "x76 y214 w54 h24", ExText.DeleteButton(), LvRenDeleteKey)
-gLvRenGui.Add("Text", "x128 y36 w100 h24 +0x200", ExText.LvRenShotKeyLabel())
-gLvRenCtrls["LvRenShotKey"] := gLvRenGui.Add("Edit", "vLvRenShotKey x234 y36 w56 h24 +ReadOnly -WantCtrlA -E0x200 Border")
+gLvRenGui.Add("Text", "x16 y16 w100 h18 +0x200", ExText.LvRenListLabel())
+GuiTheme_FlatBtnSmall(gLvRenGui, "x118 y16 w18 h18", GuiText.HelpButton(), LvRenHelp)
+gLvRenCtrls["LvRenKeysListBox"] := GuiTheme_AddListBox(gLvRenGui, "LvRenKeysListBox", 16, 38, 108, 176)
+GuiTheme_FlatBtnCompact(gLvRenGui, "x16 y220 w54 h24", ExText.AddButton(), LvRenAddKey)
+GuiTheme_FlatBtnCompact(gLvRenGui, "x78 y220 w54 h24", ExText.DeleteButton(), LvRenDeleteKey)
+gLvRenGui.Add("Text", "x130 y42 w100 h24 +0x200", ExText.LvRenShotKeyLabel())
+gLvRenCtrls["LvRenShotKey"] := gLvRenGui.Add("Edit", "vLvRenShotKey x236 y42 w56 h24 +ReadOnly -WantCtrlA -E0x200 Border")
 RegisterEditPressKeyCapture(gLvRenCtrls["LvRenShotKey"], GetKeycode.AfterCaptureEdit.Bind(gLvRenCtrls["LvRenShotKey"]))
-GuiTheme_HRule(gLvRenGui, 14, 252, 280)
-GuiTheme_FlatBtn(gLvRenGui, "x78 y260 w152 h34", ExText.SaveButton(), LvRenSave, true)
+GuiTheme_HRule(gLvRenGui, 16, 254, 276)
+GuiTheme_FlatBtn(gLvRenGui, "x78 y262 w152 h34", ExText.SaveButton(), LvRenSave, true)
 
 LvRenGetCtrl(name) {
     global gLvRenCtrls
@@ -27,7 +27,7 @@ LvRenGetCtrl(name) {
 }
 
 ShowGuiLvRen(*) {
-    ExWindowHost.ShowOwned(gLvRenGui, ExText.LvRenTitle(), "w308 h312")
+    ExWindowHost.ShowOwnedFit(gLvRenGui, ExText.LvRenTitle())
     LvRenLoadConfig()
 }
 

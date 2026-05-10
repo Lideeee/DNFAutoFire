@@ -2,7 +2,7 @@
 
 class MainKeyLayoutData {
     static BaseX() => 16
-    static TopRowY() => 30
+    static TopRowY() => 40
     static MainRowY() => this.TopRowY() + this.Height() + this.Gap()
     static Unit() => 40
     static Gap() => 4

@@ -34,7 +34,7 @@ class SettingController {
             gSettingGui.Opt("+Owner" gMainGui.Hwnd)
         }
         gSettingGui.Title := GuiText.SettingTitle()
-        gSettingGui.Show("w392 h400")
+        GuiTheme_ShowFit(gSettingGui)
         this.Load()
         this.ShowPage(page)
         GuiTheme_FlatChromeHwnd(SettingGetCtrl("SettingQuickChangeHotKey").Hwnd)
@@ -51,12 +51,10 @@ class SettingController {
         settingAutoStart := SettingGetCtrl("SettingAutoStart").Value
         settingOnSystemStart := SettingGetCtrl("SettingOnSystemStart").Value
         settingBlockWin := SettingGetCtrl("SettingBlockWin").Value
-        settingAutoPresetSwitch := SettingGetCtrl("SettingAutoPresetSwitch").Value
 
         SaveConfig("SettingAutoStart", settingAutoStart)
         SaveConfig("SettingOnSystemStart", settingOnSystemStart)
         SaveConfig("SettingBlockWin", settingBlockWin)
-        SaveConfig("SettingAutoPresetSwitch", settingAutoPresetSwitch ? 1 : 0)
 
         _OnSystemStart := settingOnSystemStart
         _BlockWin := settingBlockWin
@@ -71,7 +69,6 @@ class SettingController {
         SettingGetCtrl("SettingAutoStart").Value := LoadConfig("SettingAutoStart", false)
         SettingGetCtrl("SettingOnSystemStart").Value := LoadConfig("SettingOnSystemStart", false)
         SettingGetCtrl("SettingBlockWin").Value := LoadConfig("SettingBlockWin", false)
-        SettingGetCtrl("SettingAutoPresetSwitch").Value := Trim(LoadConfig("SettingAutoPresetSwitch", "0")) = "1"
         qhk := LoadConfig("QuickChangeHotKey")
         if (qhk = "") {
             qhk := "!``"
