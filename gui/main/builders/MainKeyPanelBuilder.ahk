@@ -7,19 +7,10 @@ class MainKeyPanelBuilder {
 
         for item in MainKeyLayoutData.GetRows() {
             name := item[1], pos := item[2], label := item.Length >= 3 ? item[3] : name
-            fontSize := GuiTheme_MainKeyLabelFontSize(name)
-            if MainKeyUiGrayOnly(name) {
-                gMainGui.SetFont(fontSize, GuiTheme_Face)
-                ctrl := MainAdd("Text", "v" name " " pos . GuiTheme_MainKeyCellSuffix(true), label)
-            } else {
-                gMainGui.SetFont(fontSize " c" GuiTheme_KeyOff, GuiTheme_Face)
-                ctrl := MainAdd("Text", "v" name " " pos . GuiTheme_MainKeyCellSuffix(false), label)
-                ctrl.OnEvent("Click", MainKeyClick)
-            }
+            MainCreateKeyCap(gMainGui, name, pos, label, MainKeyUiGrayOnly(name))
         }
 
-        gMainGui.SetFont("s10 norm c334155", GuiTheme_Face)
-        gMainGui.Add("Text", MainKeyLayoutData.WinRect() . GuiTheme_MainKeyCellSuffix(true), "Win")
+        MainCreateKeyCap(gMainGui, "Win", MainKeyLayoutData.WinRect(), "Win", true)
 
         versionX := MainKeyLayoutData.TopRowVersionX()
         versionY := MainKeyLayoutData.TopRowVersionY()

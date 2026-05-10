@@ -22,6 +22,7 @@ class MainFeaturePanel {
         linkX := colX + toggleW + 8
         textCtrl := MainAdd("Text", "vMainExLink_" name " x" linkX " y" y " w" linkW " h22 +0x200 +0x100", linkText)
         textCtrl.OnEvent("Click", linkHandler)
+        GuiTheme_RegisterHandCursor(textCtrl)
         this.RegisterMutedLink(textCtrl)
     }
 

@@ -20,6 +20,7 @@ global gPresetDragItemName := ""
 global gKeyIntervalMenu := Menu()
 global gKeyIntervalMenuTarget := ""
 global gMainMutedLinks := []
+global gMainKeyCaps := Map()
 global __QuickSwitchHotkey := ""
 
 MainAdd(ctrlType, options, text := "") {

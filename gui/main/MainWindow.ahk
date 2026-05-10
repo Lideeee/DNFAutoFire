@@ -26,10 +26,11 @@ class MainWindow {
         if IsSet(_singleton) {
             return _singleton
         }
-        global gMainGui, gMainCtrls, gMainExSwitchUi
+        global gMainGui, gMainCtrls, gMainExSwitchUi, gMainKeyCaps
         gMainGui := Gui("-MinimizeBox -MaximizeBox -Theme +OwnDialogs")
         gMainCtrls := Map()
         gMainExSwitchUi := Map()
+        gMainKeyCaps := Map()
         gMainGui.OnEvent("Escape", MainGuiEscape)
         gMainGui.OnEvent("Close", MainGuiClose)
         gMainGui.OnEvent("ContextMenu", MainGuiContextMenu)

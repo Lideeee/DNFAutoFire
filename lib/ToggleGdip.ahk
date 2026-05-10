@@ -31,5 +31,6 @@ class ToggleGdip {
 
     OnClick(handler) {
         this.ctrl.OnEvent("Click", handler)
+        GuiTheme_RegisterHandCursor(this.ctrl)
     }
 }

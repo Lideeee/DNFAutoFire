@@ -39,6 +39,7 @@ RegisterEditPressKeyCapture(edit, afterCapture := unset) {
     if !IsObject(edit) {
         return
     }
+    try GuiTheme_RegisterHandCursor(edit)
     __PressKeyEditHwndMap[edit.Hwnd] := edit
     if IsSet(afterCapture) {
         __PressKeyEditAfterMap[edit.Hwnd] := afterCapture

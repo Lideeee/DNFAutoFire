@@ -12,6 +12,8 @@ global GuiTheme_SwitchTrackOn := UiTheme.SwitchTrackOn
 
 ; 使用 -VScroll 隐藏竖条时，靠 WM_MOUSEWHEEL + LB_SETTOPINDEX 滚动（见 GuiTheme_RegisterListBoxWheel）
 global GuiTheme__LbWheelHwnds := Map()
+global GuiTheme__HandCursorHwnds := Map()
+global GuiTheme__HandCursorHandle := 0
 
 GuiTheme_Apply(gui) {
     if !IsObject(gui) {
@@ -19,6 +21,11 @@ GuiTheme_Apply(gui) {
     }
     try gui.BackColor := UiTheme.WindowBg
     gui.SetFont("s10 norm c" UiTheme.KeyOff, GuiTheme_Face)
+    static cursorHooked := false
+    if !cursorHooked {
+        cursorHooked := true
+        OnMessage(0x0020, GuiTheme__OnSetCursor)
+    }
 }
 
 ; GDI+ 圆角按钮；primary 为真时使用主色（保存等强调按钮）。
@@ -51,6 +58,22 @@ GuiTheme_RegisterListBoxWheel(ctrl) {
         hooked := true
         OnMessage(0x020A, GuiTheme__ListBoxOnMouseWheel)
     }
+}
+
+GuiTheme_RegisterHandCursor(ctrl) {
+    global GuiTheme__HandCursorHwnds
+    if !IsObject(ctrl) {
+        return
+    }
+    try hw := ctrl.Hwnd
+    catch {
+        return
+    }
+    if !hw {
+        return
+    }
+    rootHwnd := DllCall("user32\GetAncestor", "ptr", hw, "uint", 2, "ptr")
+    GuiTheme__HandCursorHwnds[hw] := rootHwnd ? rootHwnd : hw
 }
 
 GuiTheme_AddListBox(gui, vName, x, y, w, h) {
@@ -132,6 +155,42 @@ GuiTheme__ListBoxOnMouseWheel(wParam, lParam, msg, hwnd) {
     return 0
 }
 
+GuiTheme__OnSetCursor(wParam, lParam, msg, hwnd) {
+    global GuiTheme__HandCursorHwnds, GuiTheme__HandCursorHandle
+    currentRoot := DllCall("user32\GetAncestor", "ptr", hwnd, "uint", 2, "ptr")
+    if !currentRoot {
+        currentRoot := hwnd
+    }
+    pt := Buffer(8, 0)
+    if !DllCall("user32\GetCursorPos", "ptr", pt) {
+        return
+    }
+    px := NumGet(pt, 0, "int")
+    py := NumGet(pt, 4, "int")
+    rc := Buffer(16, 0)
+    for handHwnd, rootHwnd in GuiTheme__HandCursorHwnds {
+        if (rootHwnd != currentRoot) {
+            continue
+        }
+        if !DllCall("user32\GetWindowRect", "ptr", handHwnd, "ptr", rc) {
+            continue
+        }
+        left := NumGet(rc, 0, "int")
+        top := NumGet(rc, 4, "int")
+        right := NumGet(rc, 8, "int")
+        bottom := NumGet(rc, 12, "int")
+        if (px >= left && px < right && py >= top && py < bottom) {
+            if !GuiTheme__HandCursorHandle {
+                GuiTheme__HandCursorHandle := DllCall("user32\LoadCursor", "ptr", 0, "ptr", 32649, "ptr")
+            }
+            if GuiTheme__HandCursorHandle {
+                DllCall("user32\SetCursor", "ptr", GuiTheme__HandCursorHandle)
+                return true
+            }
+        }
+    }
+}
+
 ; 主界面键盘格：背景与 SS 标志；locked 时 +Disabled（Esc / Win 等）
 GuiTheme_MainKeyCellSuffix(locked := false) {
     suf := " Background" GuiTheme_KeyCellBg " -E0x200 +0x200 +0x100 +Center"
@@ -144,8 +203,8 @@ GuiTheme_MainKeyCellSuffix(locked := false) {
 ; 主界面键帽字号（与 MainSetKeyState 一致）
 GuiTheme_MainKeyLabelFontSize(keyName) {
     switch keyName {
-        case "Backspace", "Backslash", "Enter", "LShift", "RShift", "LCtrl", "RCtrl", "Space", "NumLk", "NumEnter":
-            return "s9"
+        case "Backspace", "Backslash", "Enter", "LShift", "RShift", "LCtrl", "RCtrl", "LAlt", "RAlt", "Space", "NumLk", "NumEnter":
+            return "s10"
         case "Caps", "Tab":
             return "s10"
         case "Up", "Down", "Left", "Right":

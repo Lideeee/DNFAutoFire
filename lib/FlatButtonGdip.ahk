@@ -17,6 +17,8 @@ class FlatButtonGdip {
         this._ensureLabel()
         this.ctrl.OnEvent("Click", this._OnClick.Bind(this))
         this.label.OnEvent("Click", this._OnClick.Bind(this))
+        GuiTheme_RegisterHandCursor(this.ctrl)
+        GuiTheme_RegisterHandCursor(this.label)
         FlatButtonGdip._all.Push(this)
         FlatButtonGdip._EnsureTimer()
     }

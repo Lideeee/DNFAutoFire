@@ -70,12 +70,12 @@ class GdipUiHelpers {
         }
     }
 
-    static DrawStringCentered(gr, text, face, sizePx, argb, x, y, w, h) {
+    static DrawStringCentered(gr, text, face, sizePx, argb, x, y, w, h, fontStyle := 0) {
         if (text = "") {
             return
         }
-        try DllCall("gdiplus\GdipSetTextRenderingHint", "ptr", gr, "int", 5) ; ClearTypeGridFit
-        try DllCall("gdiplus\GdipSetPixelOffsetMode", "ptr", gr, "int", 2) ; Half
+        try DllCall("gdiplus\GdipSetTextRenderingHint", "ptr", gr, "int", 3) ; AntiAlias
+        try DllCall("gdiplus\GdipSetPixelOffsetMode", "ptr", gr, "int", 0) ; Default
         ff := 0
         st := DllCall("gdiplus\GdipCreateFontFamilyFromName", "wstr", face, "ptr", 0, "ptr*", &ff := 0)
         if (st != 0 || !ff) {
@@ -83,7 +83,7 @@ class GdipUiHelpers {
         }
         try {
             pFont := 0
-            if DllCall("gdiplus\GdipCreateFont", "ptr", ff, "float", sizePx, "int", 0, "int", 0, "ptr*", &pFont := 0) != 0 || !pFont {
+            if DllCall("gdiplus\GdipCreateFont", "ptr", ff, "float", sizePx, "int", fontStyle, "int", 0, "ptr*", &pFont := 0) != 0 || !pFont {
                 return
             }
             try {
@@ -170,11 +170,157 @@ class GdipUiHelpers {
         }
     }
 
+    static FillPolygon(gr, argb, points) {
+        if !IsObject(points) || points.Length < 3 {
+            return
+        }
+        pBrush := 0
+        if DllCall("gdiplus\GdipCreateSolidFill", "uint", argb, "ptr*", &pBrush := 0) != 0 || !pBrush {
+            return
+        }
+        try {
+            buf := Buffer(points.Length * 8, 0)
+            offset := 0
+            for pt in points {
+                NumPut("float", pt[1], buf, offset)
+                NumPut("float", pt[2], buf, offset + 4)
+                offset += 8
+            }
+            DllCall("gdiplus\GdipFillPolygon", "ptr", gr, "ptr", pBrush, "ptr", buf.Ptr, "int", points.Length, "int", 0)
+        } finally {
+            DllCall("gdiplus\GdipDeleteBrush", "ptr", pBrush)
+        }
+    }
+
+    static RenderKeycapBitmap(w, h, text, visualState, renderState, textSizePx, bold := false, keyName := "", showHint := false) {
+        GdiPlusSession.EnsureStarted()
+        pBitmap := 0
+        stride := ((w * 4 + 3) // 4) * 4
+        if DllCall("gdiplus\GdipCreateBitmapFromScan0", "int", w, "int", h, "int", stride, "int", this.PixelFormat32bppARGB, "ptr", 0, "ptr*", &pBitmap := 0) != 0 || !pBitmap {
+            return 0
+        }
+        try {
+            gr := 0
+            if DllCall("gdiplus\GdipGetImageGraphicsContext", "ptr", pBitmap, "ptr*", &gr := 0) != 0 || !gr {
+                return 0
+            }
+            try {
+                DllCall("gdiplus\GdipSetSmoothingMode", "ptr", gr, "int", 4)
+                DllCall("gdiplus\GdipGraphicsClear", "ptr", gr, "uint", 0)
+                this._PaintKeycap(gr, w, h, visualState, renderState, keyName, showHint)
+            } finally {
+                DllCall("gdiplus\GdipDeleteGraphics", "ptr", gr)
+            }
+            return this.BitmapToHBITMAP(pBitmap)
+        } finally {
+            DllCall("gdiplus\GdipDisposeImage", "ptr", pBitmap)
+        }
+    }
+
+    static _PaintKeycap(gr, w, h, visualState, renderState, keyName := "", showHint := false) {
+        pad := 1.0
+        rr := 0
+        palette := this._KeycapPalette(visualState)
+        bg := this.HexRgbToARGB(palette.bg)
+        border := this.HexRgbToARGB(palette.border)
+        hint := this.HexRgbToARGB(palette.hint)
+        if (renderState = "hover") {
+            bg := this._LightenArgb(bg, 0.02)
+            border := this._DarkenArgb(border, 0.98)
+        } else if (renderState = "pressed") {
+            bg := this._DarkenArgb(bg, 0.98)
+            border := this._DarkenArgb(border, 0.9)
+        }
+        this.FillRoundRect(gr, bg, pad, pad, w - 2 * pad, h - 2 * pad, rr)
+        this.StrokeRoundRect(gr, border, pad, pad, w - 2 * pad, h - 2 * pad, rr, 1)
+        this._DrawKeycapHint(gr, showHint, hint, w, h, pad)
+        if (keyName = "Win") {
+            this._DrawWindowsGlyph(gr, palette.text, w, h)
+        } else if (keyName = "Up" || keyName = "Down" || keyName = "Left" || keyName = "Right") {
+            this._DrawArrowGlyph(gr, palette.text, w, h, keyName)
+        }
+    }
+
+    static _DrawKeycapHint(gr, showHint, hintArgb, w, h, pad) {
+        if !showHint {
+            return
+        }
+        lineW := 8
+        lineH := 2
+        inset := 4
+        x := w - pad - inset - lineW
+        y := pad + inset
+        this.FillRoundRect(gr, hintArgb, x, y, lineW, lineH, 0)
+    }
+
+    static _DrawWindowsGlyph(gr, colorHex, w, h) {
+        argb := this.HexRgbToARGB(colorHex)
+        glyphW := 16
+        glyphH := 16
+        gap := 2
+        paneW := Floor((glyphW - gap) / 2)
+        paneH := Floor((glyphH - gap) / 2)
+        startX := Floor((w - glyphW) / 2)
+        startY := Floor((h - glyphH) / 2)
+        this.FillRoundRect(gr, argb, startX, startY, paneW, paneH, 0)
+        this.FillRoundRect(gr, argb, startX + paneW + gap, startY, paneW, paneH, 0)
+        this.FillRoundRect(gr, argb, startX, startY + paneH + gap, paneW, paneH, 0)
+        this.FillRoundRect(gr, argb, startX + paneW + gap, startY + paneH + gap, paneW, paneH, 0)
+    }
+
+    static _DrawArrowGlyph(gr, colorHex, w, h, direction) {
+        argb := this.HexRgbToARGB(colorHex)
+        cx := w / 2.0 - 4
+        cy := h / 2.0 - 2
+        head := 3
+        shaftW := 1
+        shaftLen := 9
+        switch direction {
+            case "Up":
+                this.FillRoundRect(gr, argb, cx - shaftW / 2, cy - 1, shaftW, shaftLen, 0)
+                pts := [[cx, cy - head - 2], [cx + head, cy + 1], [cx - head, cy + 1]]
+            case "Down":
+                this.FillRoundRect(gr, argb, cx - shaftW / 2, cy - shaftLen + 1, shaftW, shaftLen, 0)
+                pts := [[cx - head, cy - 1], [cx + head, cy - 1], [cx, cy + head + 2]]
+            case "Left":
+                this.FillRoundRect(gr, argb, cx - 1, cy - shaftW / 2, shaftLen, shaftW, 0)
+                pts := [[cx - head - 2, cy], [cx + 1, cy - head], [cx + 1, cy + head]]
+            default:
+                this.FillRoundRect(gr, argb, cx - shaftLen + 1, cy - shaftW / 2, shaftLen, shaftW, 0)
+                pts := [[cx - 1, cy - head], [cx + head + 2, cy], [cx - 1, cy + head]]
+        }
+        this.FillPolygon(gr, argb, pts)
+    }
+
+    static _KeycapPalette(visualState) {
+        switch visualState {
+            case "on":
+                return { bg: UiTheme.KeyCapOnBg, border: UiTheme.KeyCapOnBorder, text: UiTheme.KeyOn, hint: UiTheme.KeyCapHintOn }
+            case "override":
+                return { bg: UiTheme.KeyCapOvBg, border: UiTheme.KeyCapOvBorder, text: UiTheme.KeyOv, hint: UiTheme.KeyCapHintOv }
+            case "locked":
+                return { bg: UiTheme.KeyCapLockedBg, border: UiTheme.KeyCapLockedBorder, text: UiTheme.KeyCapLockedText, hint: UiTheme.KeyCapHintLocked }
+            default:
+                return { bg: UiTheme.KeyCapOffBg, border: UiTheme.KeyCapOffBorder, text: UiTheme.KeyOff, hint: UiTheme.KeyCapOffBorder }
+        }
+    }
+
     static _DarkenArgb(argb, factor) {
         a := (argb >> 24) & 0xFF
         r := Max(0, Round(((argb >> 16) & 0xFF) * factor))
         g := Max(0, Round(((argb >> 8) & 0xFF) * factor))
         b := Max(0, Round((argb & 0xFF) * factor))
+        return (a << 24) | (r << 16) | (g << 8) | b
+    }
+
+    static _LightenArgb(argb, amount) {
+        a := (argb >> 24) & 0xFF
+        r0 := (argb >> 16) & 0xFF
+        g0 := (argb >> 8) & 0xFF
+        b0 := argb & 0xFF
+        r := Min(255, Round(r0 + (255 - r0) * amount))
+        g := Min(255, Round(g0 + (255 - g0) * amount))
+        b := Min(255, Round(b0 + (255 - b0) * amount))
         return (a << 24) | (r << 16) | (g << 8) | b
     }
 

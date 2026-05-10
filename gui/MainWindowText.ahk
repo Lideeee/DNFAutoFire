@@ -10,7 +10,7 @@ class MainWindowText {
     }
 
     static KeyHelp() {
-        return "按键设置 - [ 黑色=关闭 红色=启用 蓝色=独立间隔（右键可设置独立间隔） ]"
+        return "按键设置 - [ 灰色=关闭 蓝色=启用 蓝色短线=独立间隔（右键可设置独立间隔） ]"
     }
 
     static VersionText(version) {
