@@ -1,4 +1,4 @@
-#Requires AutoHotkey v2.0
+﻿#Requires AutoHotkey v2.0
 
 ; 进程内唯一 GDI+ 会话（与截图/PNG 保存、GUI 自绘共用）。
 class GdiPlusSession {

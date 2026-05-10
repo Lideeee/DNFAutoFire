@@ -1,4 +1,4 @@
-; 剑宗：按住技能键超过延迟后高频发该键（与原 while 内每 1ms 可 Send 等价）；KeyRouter + 主进程
+﻿; 剑宗：按住技能键超过延迟后高频发该键（与原 while 内每 1ms 可 Send 等价）；KeyRouter + 主进程
 
 global _JianZongShotKeyCode := ""
 global _JianZongPressKey := ""

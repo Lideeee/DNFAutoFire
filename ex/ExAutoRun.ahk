@@ -1,4 +1,4 @@
-; 自动奔跑：须持续按住满 30ms 才 SendEvent 一串 Down-Up-Down（未满则抬起取消）；Critical 包裹发送。
+﻿; 自动奔跑：须持续按住满 30ms 才 SendEvent 一串 Down-Up-Down（未满则抬起取消）；Critical 包裹发送。
 
 class ExAutoRun {
     static _sides := Map()

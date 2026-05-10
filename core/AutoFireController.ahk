@@ -1,313 +1,304 @@
-#Requires AutoHotkey v2.0
+﻿#Requires AutoHotkey v2.0
 
-; 连发启停、预设切换、主连发热键注册；主界面键帽状态通过 RegisterMainSetKeyState 注入，避免 core 依赖 GUI
+; 连发启停、预设切换、主连发热键注册；主界面按键状态通过 RegisterMainKeyStateRenderer 注入，避免 core 依赖 GUI
 
-class AutoFireController {
-    static _onMainSetKeyState := 0
+class AutoFireService {
+    static _onMainKeyStateRender := 0
 
-    static RegisterMainSetKeyState(callback) {
-        this._onMainSetKeyState := callback
+    static RegisterMainKeyStateRenderer(callback) {
+        this._onMainKeyStateRender := callback
     }
 
-    static _VisualKey(key, on, ov := unset) {
-        fn := this._onMainSetKeyState
-        if !fn {
+    static RenderMainKeyState(keyName, isEnabled, overrideMap := unset) {
+        renderer := this._onMainKeyStateRender
+        if !renderer {
             return
         }
         try {
-            if IsSet(ov) {
-                fn.Call(key, on, ov)
+            if IsSet(overrideMap) {
+                renderer.Call(keyName, isEnabled, overrideMap)
             } else {
-                fn.Call(key, on, 0)
+                renderer.Call(keyName, isEnabled, 0)
             }
         }
     }
 
-    static ChangeKeyAutoFireState(key) {
-        keys := SessionState.AutoFireEnableKeys
-        ov := LoadPresetKeyIntervalOverrides(SessionState.GetCurrentPreset())
-        if SessionState.IsKeyAutoFire(key) {
-            for i, k in keys {
-                if (k == key) {
-                    keys.RemoveAt(i)
+    static ToggleAutoFireKey(keyName) {
+        enabledKeys := SessionState.AutoFireEnableKeys
+        overrideMap := PresetManager.LoadKeyIntervalOverrides(SessionState.GetCurrentPreset())
+        if SessionState.IsKeyAutoFire(keyName) {
+            for index, existingKey in enabledKeys {
+                if (existingKey = keyName) {
+                    enabledKeys.RemoveAt(index)
                     break
                 }
             }
-            this._VisualKey(key, false, ov)
-            SetOriginalDirect(key)
+            this.RenderMainKeyState(keyName, false, overrideMap)
+            AutoFireController.RestoreOriginalKeyMode(keyName)
         } else {
-            keys.Push(key)
-            this._VisualKey(key, true, ov)
-            SetOriginalBlocking(key)
+            enabledKeys.Push(keyName)
+            this.RenderMainKeyState(keyName, true, overrideMap)
+            AutoFireController.UseBlockingOriginalKeyMode(keyName)
         }
     }
 
-    static Start() {
+    static StartSession() {
         presetName := SessionState.GetCurrentPreset()
-        intervalMs := Round(LoadPreset(presetName, "MainAutoFireInterval", 20) + 0)
-        if (intervalMs < 1) {
-            intervalMs := 1
-        } else if (intervalMs > 200) {
-            intervalMs := 200
-        }
-        keyIvOv := LoadPresetKeyIntervalOverrides(presetName)
-        AutoFireMainUnregisterHotkeys()
-        ZhanFaUnregisterHotkeys()
-        LvRenUnregisterHotkeys()
-        GuanYuUnregisterHotkeys()
-        PetSkillUnregisterHotkeys()
-        JianZongUnregisterHotkeys()
-        ComboUnregisterHotkeys()
-        ExAutoRun.UnregisterHotkeys()
+        mainIntervalMs := PresetManager.NormalizeInterval(LoadPreset(presetName, "MainAutoFireInterval", PresetManager.DefaultAutoFireInterval))
+        keyIntervalOverrides := PresetManager.LoadKeyIntervalOverrides(presetName)
+        MainAutoFireHotkeys_Stop()
+        FeatureModuleRegistry.StopAllModules()
         KeyRouter.ClearAll()
-        for afKey in SessionState.AutoFireEnableKeys {
-            SetOriginalBlocking(afKey)
+        for keyName in SessionState.AutoFireEnableKeys {
+            AutoFireController.UseBlockingOriginalKeyMode(keyName)
         }
-        AutoFireMainRegisterHotkeys(intervalMs, keyIvOv)
+        MainAutoFireHotkeys_Start(mainIntervalMs, keyIntervalOverrides)
         Sleep(10)
-        this.StartEx()
-        SetTrayRunningIcon(true)
+        this.StartFeatureModules()
+        AutoFireController.UpdateTrayRunningIcon(true)
         SetTimer(AppTip.Bind("连发已启动 - " . SessionState.GetCurrentPreset()), -100)
         try PresetRecognition_UpdateHotkeys()
     }
 
-    static StartEx() {
-        if PresetExFeatures.IsOn("LvRen") {
-            LvRenRegisterHotkeys()
-        }
-        if PresetExFeatures.IsOn("GuanYu") {
-            GuanYuRegisterHotkeys()
-        }
-        if PresetExFeatures.IsOn("PetSkill") {
-            PetSkillRegisterHotkeys()
-        }
-        if PresetExFeatures.IsOn("JianZong") {
-            skillKey := LoadPreset(SessionState.GetCurrentPreset(), "JianZongSkillKey")
-            SetOriginalBlocking(skillKey)
-            JianZongRegisterHotkeys()
-        }
-        if PresetExFeatures.IsOn("AutoRun") {
-            ExAutoRun.RegisterHotkeys()
-        }
-        if PresetExFeatures.IsOn("Combo") {
-            ComboRegisterHotkeys()
-        }
-        if PresetExFeatures.IsOn("ZhanFa") {
-            ZhanFaRegisterHotkeys()
-        }
+    static StartFeatureModules() {
+        FeatureModuleRegistry.StartEnabledModules(SessionState.GetCurrentPreset())
     }
 
-    static Stop() {
+    static StopSession() {
         allKeys := GetAllKeys()
-        for k in allKeys {
-            SetOriginalDirect(k)
+        for keyName in allKeys {
+            AutoFireController.RestoreOriginalKeyMode(keyName)
         }
-        AutoFireMainUnregisterHotkeys()
-        ZhanFaUnregisterHotkeys()
-        LvRenUnregisterHotkeys()
-        GuanYuUnregisterHotkeys()
-        PetSkillUnregisterHotkeys()
-        JianZongUnregisterHotkeys()
-        ComboUnregisterHotkeys()
-        ExAutoRun.UnregisterHotkeys()
+        MainAutoFireHotkeys_Stop()
+        FeatureModuleRegistry.StopAllModules()
         KeyRouter.ClearAll()
-        SetTrayRunningIcon(false)
+        AutoFireController.UpdateTrayRunningIcon(false)
         try PresetRecognition_CancelPending()
         try PresetRecognition_UpdateHotkeys()
     }
 
-    static SetAllKeysDisable() {
+    static ClearAllAutoFireKeys() {
         allKeys := GetAllKeys()
-        for k in allKeys {
-            this._VisualKey(k, false)
+        for keyName in allKeys {
+            this.RenderMainKeyState(keyName, false)
         }
         SessionState.AutoFireEnableKeys := []
     }
 
-    static SetAllKeysAutoFire(keys) {
-        this.SetAllKeysDisable()
+    static ApplyAutoFireKeys(keys, presetName := unset) {
+        this.ClearAllAutoFireKeys()
         if !IsObject(keys) {
             return
         }
-        ov := LoadPresetKeyIntervalOverrides(SessionState.GetCurrentPreset())
-        for kName in keys {
-            if !IsValueInArray(kName, GetAllKeys()) {
+        if !IsSet(presetName) {
+            presetName := SessionState.GetCurrentPreset()
+        }
+        overrideMap := PresetManager.LoadKeyIntervalOverrides(presetName)
+        for keyName in keys {
+            if !IsValueInArray(keyName, GetAllKeys()) {
                 continue
             }
-            this._VisualKey(kName, true, ov)
-            SessionState.AutoFireEnableKeys.Push(kName)
+            this.RenderMainKeyState(keyName, true, overrideMap)
+            SessionState.AutoFireEnableKeys.Push(keyName)
         }
     }
 
-    static ChangePreset(presetName) {
-        this.Stop()
+    static SwitchPreset(presetName) {
+        this.StopSession()
         presetKeys := LoadPresetKeys(presetName)
-        this.SetAllKeysAutoFire(presetKeys)
-        SessionState.SetCurrentPreset(presetName)
-        SaveLastPreset(presetName)
+        PresetManager.Select(presetName, true)
+        this.ApplyAutoFireKeys(presetKeys, presetName)
         MainLoadEx()
     }
 
+    static IsSessionRunning() {
+        mainRegisteredCount := SessionState.AutoFireMainHotkeyRegs.Length
+        return mainRegisteredCount > 0 || FeatureModuleRegistry.AnyModuleRunning()
+    }
+
+    static SwitchPresetKeepingRunState(presetName) {
+        presetName := Trim(presetName)
+        if (presetName = "" || presetName = SessionState.GetCurrentPreset()) {
+            return
+        }
+        wasRunning := this.IsSessionRunning()
+        this.SwitchPreset(presetName)
+        if wasRunning {
+            this.StartSession()
+        }
+    }
+}
+
+class AutoFireController {
+    static _originalKeyBlockers := Map()
+
+    static RegisterMainSetKeyState(callback) {
+        AutoFireService.RegisterMainKeyStateRenderer(callback)
+    }
+
+    static Start() {
+        AutoFireService.StartSession()
+    }
+
+    static StartEx() {
+        AutoFireService.StartFeatureModules()
+    }
+
+    static Stop() {
+        AutoFireService.StopSession()
+    }
+
+    static ChangeKeyAutoFireState(keyName) {
+        AutoFireService.ToggleAutoFireKey(keyName)
+    }
+
+    static SetAllKeysDisable() {
+        AutoFireService.ClearAllAutoFireKeys()
+    }
+
+    static SetAllKeysAutoFire(keys) {
+        AutoFireService.ApplyAutoFireKeys(keys)
+    }
+
+    static ChangePreset(presetName) {
+        AutoFireService.SwitchPreset(presetName)
+    }
+
     static IsRunning() {
-        mr := SessionState.AutoFireMainHotkeyRegs.Length
-        return mr > 0 || ExAutoRun._registered
+        return AutoFireService.IsSessionRunning()
     }
 
     static ChangePresetAndResumeAutoFire(presetName) {
-        presetName := Trim(presetName)
-        if (presetName = "") {
+        AutoFireService.SwitchPresetKeepingRunState(presetName)
+    }
+
+    static UseBlockingOriginalKeyMode(keyName) {
+        routerId := GetKeycode.ToRouterId(keyName)
+        if (routerId = "" || this._originalKeyBlockers.Has(routerId)) {
             return
         }
-        if (presetName = SessionState.GetCurrentPreset()) {
+        blockFn := (*) => 0
+        try {
+            HotIfWinActive("ahk_group DNF")
+            Hotkey("$*" routerId, blockFn, "On")
+            Hotkey("$*" routerId " up", blockFn, "On")
+            HotIf()
+            this._originalKeyBlockers[routerId] := blockFn
+        } catch {
+            try HotIf()
+        }
+    }
+
+    static RestoreOriginalKeyMode(keyName) {
+        routerId := GetKeycode.ToRouterId(keyName)
+        if (routerId = "") {
             return
         }
-        was := this.IsRunning()
-        this.ChangePreset(presetName)
-        if was {
-            this.Start()
+        try {
+            HotIfWinActive("ahk_group DNF")
+            try Hotkey("$*" routerId, "Off")
+            try Hotkey("$*" routerId " up", "Off")
+            HotIf()
+        } catch {
+            try HotIf()
         }
+        if this._originalKeyBlockers.Has(routerId) {
+            this._originalKeyBlockers.Delete(routerId)
+        }
+    }
+
+    static UpdateTrayRunningIcon(isRunning) {
+        try TraySetIcon(A_ScriptFullPath, isRunning ? 3 : 4)
+    }
+
+    static IsKeyAutoFire(keyName) {
+        return SessionState.IsKeyAutoFire(keyName)
     }
 }
 
-; 按用户要求：不屏蔽原键。保留函数是为了兼容现有调用点。
-SetOriginalBlocking(key) {
-}
-
-SetOriginalDirect(key) {
-}
-
-SetTrayRunningIcon(state) {
-    try TraySetIcon(A_ScriptFullPath, state ? 3 : 4)
-}
-
-StartAutoFire() {
-    AutoFireController.Start()
-}
-
-StopAutoFire() {
-    AutoFireController.Stop()
-}
-
-StartEx() {
-    AutoFireController.StartEx()
-}
-
-ChangeKeyAutoFireState(key) {
-    AutoFireController.ChangeKeyAutoFireState(key)
-}
-
-IsKeyAutoFire(key) {
-    return SessionState.IsKeyAutoFire(key)
-}
-
-SetAllKeysDisable() {
-    AutoFireController.SetAllKeysDisable()
-}
-
-SetAllKeysAutoFire(keys) {
-    AutoFireController.SetAllKeysAutoFire(keys)
-}
-
-ChangePreset(presetName) {
-    AutoFireController.ChangePreset(presetName)
-}
-
-AutoFireIsRunning() {
-    return AutoFireController.IsRunning()
-}
-
-ChangePresetAndResumeAutoFire(presetName) {
-    AutoFireController.ChangePresetAndResumeAutoFire(presetName)
-}
-
-AutoFireMainOnDown(tickFn, intervalMs, *) {
+MainAutoFireHotkeys_OnKeyDown(tickFn, intervalMs, *) {
     SetTimer(tickFn, intervalMs)
 }
 
-AutoFireMainOnUp(tickFn, *) {
+MainAutoFireHotkeys_OnKeyUp(tickFn, *) {
     SetTimer(tickFn, 0)
 }
 
-AutoFireMainUnregisterHotkeys() {
-    regs := SessionState.AutoFireMainHotkeyRegs
-    if !regs.Length {
+MainAutoFireHotkeys_Stop() {
+    registrations := SessionState.AutoFireMainHotkeyRegs
+    if !registrations.Length {
         return
     }
-    for reg in regs {
-        SetTimer(reg.tickFn, 0)
-        if reg.HasOwnProp("downFn") {
-            KeyRouter.UnsubscribeDown(reg.id, reg.downFn)
+    for registration in registrations {
+        SetTimer(registration.tickFn, 0)
+        if registration.HasOwnProp("downFn") {
+            KeyRouter.UnsubscribeDown(registration.id, registration.downFn)
         }
-        if reg.HasOwnProp("upFn") {
-            KeyRouter.UnsubscribeUp(reg.id, reg.upFn)
+        if registration.HasOwnProp("upFn") {
+            KeyRouter.UnsubscribeUp(registration.id, registration.upFn)
         }
     }
     SessionState.AutoFireMainHotkeyRegs := []
 }
 
-AutoFireMainRegisterHotkeys(defaultIntervalMs, keyIvOv := unset) {
-    AutoFireMainUnregisterHotkeys()
-    if !IsSet(keyIvOv) || !IsObject(keyIvOv) {
-        keyIvOv := Map()
+MainAutoFireHotkeys_Start(defaultIntervalMs, keyIntervalOverrides := unset) {
+    MainAutoFireHotkeys_Stop()
+    if !IsSet(keyIntervalOverrides) || !IsObject(keyIntervalOverrides) {
+        keyIntervalOverrides := Map()
     }
-    afKeys := SessionState.AutoFireEnableKeys
-    if (afKeys.Length = 0) {
+    autoFireKeys := SessionState.AutoFireEnableKeys
+    if (autoFireKeys.Length = 0) {
         return
     }
-    for afKey in afKeys {
-        effectiveMs := defaultIntervalMs
-        if keyIvOv.Has(afKey) {
-            effectiveMs := Round(keyIvOv[afKey] + 0)
-            if (effectiveMs < 1) {
-                effectiveMs := 1
-            } else if (effectiveMs > 200) {
-                effectiveMs := 200
-            }
+    for autoFireKey in autoFireKeys {
+        effectiveIntervalMs := defaultIntervalMs
+        if keyIntervalOverrides.Has(autoFireKey) {
+            effectiveIntervalMs := PresetManager.NormalizeInterval(keyIntervalOverrides[autoFireKey], defaultIntervalMs)
         }
-        if !GetKeycode.IsMainKey(afKey) {
+        if !GetKeycode.IsMainKey(autoFireKey) {
             continue
         }
-        pressKey := GetKeycode.ToProbeKey(afKey)
-        keyCode := GetKeycode.ToSendToken(afKey)
-        id := GetKeycode.ToRouterId(afKey)
-        if (id = "" || keyCode = "" || pressKey = "") {
+        probeKey := GetKeycode.ToProbeKey(autoFireKey)
+        sendToken := GetKeycode.ToSendToken(autoFireKey)
+        routerId := GetKeycode.ToRouterId(autoFireKey)
+        if (routerId = "" || sendToken = "" || probeKey = "") {
             continue
         }
-                tickFn := AutoFireEventTick.Bind(pressKey, keyCode)
-        downFn := AutoFireMainOnDown.Bind(tickFn, effectiveMs)
-        upFn := AutoFireMainOnUp.Bind(tickFn)
-        if !KeyRouter.SubscribeDown(id, downFn) {
+        tickFn := MainAutoFireHotkeys_Tick.Bind(probeKey, sendToken)
+        downFn := MainAutoFireHotkeys_OnKeyDown.Bind(tickFn, effectiveIntervalMs)
+        upFn := MainAutoFireHotkeys_OnKeyUp.Bind(tickFn)
+        if !KeyRouter.SubscribeDown(routerId, downFn) {
             continue
         }
-        if !KeyRouter.SubscribeUp(id, upFn) {
-            KeyRouter.UnsubscribeDown(id, downFn)
+        if !KeyRouter.SubscribeUp(routerId, upFn) {
+            KeyRouter.UnsubscribeDown(routerId, downFn)
             continue
         }
         SessionState.AutoFireMainHotkeyRegs.Push({
-            id: id,
+            id: routerId,
             tickFn: tickFn,
             downFn: downFn,
-            upFn: upFn,
+            upFn: upFn
         })
     }
 }
 
-AutoFireEventTick(pressKey, keyCode) {
+MainAutoFireHotkeys_Tick(probeKey, sendToken) {
     if !GameContext.IsActiveNow() {
         return
     }
-    if (pressKey = "Tab" && (GetKeyState("LAlt", "P") || GetKeyState("RAlt", "P"))) {
+    if (probeKey = "Tab" && (GetKeyState("LAlt", "P") || GetKeyState("RAlt", "P"))) {
         return
     }
-    static keyBusy := Map()
-    if (keyBusy.Has(pressKey) && keyBusy[pressKey]) {
+    static keyBusyMap := Map()
+    if (keyBusyMap.Has(probeKey) && keyBusyMap[probeKey]) {
         return
     }
-    keyBusy[pressKey] := true
+    keyBusyMap[probeKey] := true
     try {
-        SendIP(keyCode)
+        SendIP(sendToken)
     } finally {
-        keyBusy[pressKey] := false
+        keyBusyMap[probeKey] := false
     }
 }
 
@@ -315,8 +306,8 @@ IsValueInArray(value, array) {
     if !IsObject(array) {
         return false
     }
-    for v in array {
-        if (v == value) {
+    for item in array {
+        if (item = value) {
             return true
         }
     }
@@ -327,9 +318,9 @@ DeleteValueInArray(value, array) {
     if !IsObject(array) {
         return
     }
-    for i, v in array {
-        if (v == value) {
-            array.RemoveAt(i)
+    for index, item in array {
+        if (item = value) {
+            array.RemoveAt(index)
             return
         }
     }

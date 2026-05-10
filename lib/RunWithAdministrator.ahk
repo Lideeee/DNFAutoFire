@@ -1,4 +1,4 @@
-full_command_line := DllCall("GetCommandLine", "Str")
+﻿full_command_line := DllCall("GetCommandLine", "Str")
 
 ; 需要管理员时先尝试 UAC 提升；若用户取消或失败，则提示并以普通权限继续（避免进程静默退出）
 if !(A_IsAdmin || RegExMatch(full_command_line, " /restart(?!\S)")) {

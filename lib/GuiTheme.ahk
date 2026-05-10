@@ -1,4 +1,4 @@
-#Requires AutoHotkey v2.0
+﻿#Requires AutoHotkey v2.0
 
 #Include <UiTheme>
 
@@ -114,15 +114,24 @@ GuiTheme_MainKeyCellSuffix(locked := false) {
 
 ; 主界面键帽字号（与 MainSetKeyState 一致）
 GuiTheme_MainKeyLabelFontSize(keyName) {
-    return (keyName = "NumLk" || keyName = "NumEnter") ? "s9" : "s12"
+    switch keyName {
+        case "Backspace", "Backslash", "Enter", "LShift", "RShift", "LCtrl", "RCtrl", "Space", "NumLk", "NumEnter":
+            return "s9"
+        case "Caps", "Tab":
+            return "s10"
+        case "Up", "Down", "Left", "Right":
+            return "s14"
+        default:
+            return "s12"
+    }
 }
 
 GuiTheme_HRule(gui, x, y, w) {
     return gui.Add("Text", "x" x " y" y " w" w " h1 +0x200 Background" GuiTheme_KeyCellBg, "")
 }
 
-GuiTheme_FlatTextBtn(gui, opts, text, handler) {
-    return GuiTheme_FlatBtn(gui, opts, text, handler, false)
+GuiTheme_FlatTextBtn(gui, opts, text, handler, primary := false) {
+    return GuiTheme_FlatBtn(gui, opts, text, handler, primary)
 }
 
 ; 经典双 Text 开关（子窗体仍可复用）；主界面扩展行优先用 ToggleGdip。

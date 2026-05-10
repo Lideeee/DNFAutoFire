@@ -1,4 +1,4 @@
-#Requires AutoHotkey v2.0
+﻿#Requires AutoHotkey v2.0
 
 ; 统一按键分发：同一物理键只注册一对 Hotkey，按下/抬起时广播给所有订阅者（主连发、战法等）
 ;

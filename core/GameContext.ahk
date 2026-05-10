@@ -1,7 +1,6 @@
-#Requires AutoHotkey v2.0
+﻿#Requires AutoHotkey v2.0
 
-; DNF 窗口组、前台/存在状态缓存与失焦回调（业务读 IsActive / Exists / DnfHwnd；热键仍用 HotIfWinActive）
-
+; 管理 DNF 窗口组、前台状态缓存和失焦回调。
 class GameContext {
     static IsActive := false
     static Exists := false
@@ -32,7 +31,7 @@ class GameContext {
     }
 
     static _AddDnfGroup() {
-        ; 与旧 SetDNFWindowClass 一致：标题 + 进程（不加错误 ahk_class）
+        ; 兼容不同地区与版本的窗口标题和进程名。
         GroupAdd("DNF", "地下城与勇士")
         GroupAdd("DNF", "Dungeon & Fighter")
         GroupAdd("DNF", "Dungeon Fighter Online")
@@ -55,7 +54,7 @@ class GameContext {
         return WinActive("ahk_group DNF") != 0
     }
 
-    ; 立刻从系统同步前台/存在/hwnd，并在「刚失焦」时触发失焦回调（与定时 Tick 语义一致）
+    ; 立即同步窗口状态，并在刚失焦时触发回调。
     static _PulseFromOs() {
         wasActive := this.IsActive
         this._RefreshWindowState()
@@ -68,7 +67,7 @@ class GameContext {
         this._PulseFromOs()
     }
 
-    ; AppTip 等需在弹出瞬间读到最新 hwnd/焦点，避免最多 80ms 缓存滞后；已 Init 时生效
+    ; 供 AppTip 等即时逻辑主动刷新，避免依赖定时器缓存。
     static RefreshNow() {
         if !this._inited {
             return
@@ -89,7 +88,7 @@ class GameContext {
         this._FocusLostCallbacks.Push(callback)
     }
 
-    ; 与 RegisterFocusLost 成对使用；须传入同一函数对象引用（例如 KeyRouter 保存的 ObjBindMethod 结果）
+    ; 与 RegisterFocusLost 成对使用，传入同一个函数对象即可解绑。
     static UnregisterFocusLost(callback) {
         if !IsObject(callback) {
             return

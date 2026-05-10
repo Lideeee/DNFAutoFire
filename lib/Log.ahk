@@ -1,4 +1,4 @@
-; 显示控制台并输出内容（默认自动添加换行）
+﻿; 显示控制台并输出内容（默认自动添加换行）
 log(str := "", rn := 1)
 {
   if !DllCall("GetConsoleWindow") {

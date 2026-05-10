@@ -1,4 +1,4 @@
-#Requires AutoHotkey v2.0
+﻿#Requires AutoHotkey v2.0
 
 ; 会话态：当前预设、连发启用键列表、主连发定时器注册表（非持久化）
 

@@ -1,7 +1,6 @@
-#Requires AutoHotkey v2.0
+﻿#Requires AutoHotkey v2.0
 
-; 主连发 / ex 共用：合法键名 = GetAllKeys()；Gui 名 → AHK 名 → Send 用 token / KeyRouter id / GetKeyState 探测名
-
+; 主连发与扩展模块共用的按键规范转换工具。
 class GetKeycode {
     static __aliases := Map()
     static __aliasesBuilt := false
@@ -77,12 +76,11 @@ class GetKeycode {
             "lmenu", "LAlt",
             "rmenu", "RAlt",
             "bspace", "Backspace",
-            "bs", "Backspace",
+            "bs", "Backspace"
         )
         for lk, canon in ex {
             m[lk] := canon
         }
-        ; 单字符符号（InputHook 直接返回的字符）
         m["["] := "LeftBracket"
         m["]"] := "RightBracket"
         m[Chr(92)] := "Backslash"
@@ -97,7 +95,6 @@ class GetKeycode {
         this.__aliasesBuilt := true
     }
 
-    ; InputHook / 历史 ini 别名 → GetAllKeys() 规范名；无法识别返回 ""
     static CanonMainKey(raw) {
         s := Trim(raw "")
         if (s = "") {
@@ -124,10 +121,12 @@ class GetKeycode {
         return this.CanonMainKey(raw)
     }
 
-    static AfterCaptureEdit(edit, raw, *) {
-        c := this.CanonMainKey(raw)
+    static AfterCaptureEdit(edit, raw := "", *) {
+        ; BoundFunc from GetKeycode.AfterCaptureEdit.Bind(editCtrl) may bind the
+        ; first visible parameter directly, so do not rely on `this` here.
+        c := GetKeycode.CanonMainKey(raw)
         if (c = "") {
-            MsgBox("仅支持主连发键盘上的键。",, "Icon!")
+            MsgBox(GuiText.InvalidMainKey(),, "Icon!")
             edit.Text := ""
             return
         }
@@ -204,7 +203,7 @@ class GetKeycode {
         return Format("sc{:02X}", sc)
     }
 
-    ; SendIP / SendEvent 花括号内片段（vkFFscXX）
+    ; 转成 SendIP / SendEvent 使用的 vkFFscXX 令牌。
     static ToSendToken(mainKey) {
         if !this.IsMainKey(mainKey) {
             return ""
@@ -214,7 +213,7 @@ class GetKeycode {
         return Format("vkFFsc{:02X}", sc)
     }
 
-    ; KeyRouter / Hotkey ~$ 前缀用的 id
+    ; 转成 KeyRouter / Hotkey 使用的稳定 id。
     static ToRouterId(mainKey) {
         if !this.IsMainKey(mainKey) {
             return ""
@@ -230,7 +229,7 @@ class GetKeycode {
         return ahk
     }
 
-    ; GetKeyState(..., "P") 用名
+    ; 转成 GetKeyState(..., "P") 使用的名称。
     static ToProbeKey(mainKey) {
         if !this.IsMainKey(mainKey) {
             return ""

@@ -1,4 +1,4 @@
-SendIP(keyCode) {
+﻿SendIP(keyCode) {
     Critical("On")
     try {
         SetKeyDelay(-1, 8)

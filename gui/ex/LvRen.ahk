@@ -1,4 +1,5 @@
-#Requires AutoHotkey v2.0
+﻿#Requires AutoHotkey v2.0
+#Include ./ExWindowHost.ahk
 
 global gLvRenGui := Gui("+ToolWindow -Theme")
 global gLvRenCtrls := Map()
@@ -9,17 +10,16 @@ GuiTheme_Apply(gLvRenGui)
 gLvRenGui.OnEvent("Escape", LvRenGuiEscape)
 gLvRenGui.OnEvent("Close", LvRenGuiClose)
 
-; 布局与关羽 EX 一致：顶栏收紧、列表 108×176、右侧标签 w100 + 发射键 x234 w56
-gLvRenGui.Add("Text", "x14 y10 w100 h18 +0x200", "已添加技能键")
-GuiTheme_FlatBtnSmall(gLvRenGui, "x116 y10 w18 h18", "?", LvRenHelp)
+gLvRenGui.Add("Text", "x14 y10 w100 h18 +0x200", ExText.LvRenListLabel())
+GuiTheme_FlatBtnSmall(gLvRenGui, "x116 y10 w18 h18", GuiText.HelpButton(), LvRenHelp)
 gLvRenCtrls["LvRenKeysListBox"] := GuiTheme_AddMainStyleListBox(gLvRenGui, "LvRenKeysListBox", 14, 32, 108, 176)
-GuiTheme_FlatBtnCompact(gLvRenGui, "x14 y214 w54 h24", "添加", LvRenAddKey)
-GuiTheme_FlatBtnCompact(gLvRenGui, "x76 y214 w54 h24", "删除", LvRenDeleteKey)
-gLvRenGui.Add("Text", "x128 y36 w100 h24 +0x200", "流星发射键")
+GuiTheme_FlatBtnCompact(gLvRenGui, "x14 y214 w54 h24", ExText.AddButton(), LvRenAddKey)
+GuiTheme_FlatBtnCompact(gLvRenGui, "x76 y214 w54 h24", ExText.DeleteButton(), LvRenDeleteKey)
+gLvRenGui.Add("Text", "x128 y36 w100 h24 +0x200", ExText.LvRenShotKeyLabel())
 gLvRenCtrls["LvRenShotKey"] := gLvRenGui.Add("Edit", "vLvRenShotKey x234 y36 w56 h24 +ReadOnly -WantCtrlA -E0x200 Border")
 RegisterEditPressKeyCapture(gLvRenCtrls["LvRenShotKey"], GetKeycode.AfterCaptureEdit.Bind(gLvRenCtrls["LvRenShotKey"]))
 GuiTheme_HRule(gLvRenGui, 14, 252, 280)
-GuiTheme_FlatBtn(gLvRenGui, "x78 y260 w152 h34", "保存", LvRenSave, true)
+GuiTheme_FlatBtn(gLvRenGui, "x78 y260 w152 h34", ExText.SaveButton(), LvRenSave, true)
 
 LvRenGetCtrl(name) {
     global gLvRenCtrls
@@ -27,19 +27,12 @@ LvRenGetCtrl(name) {
 }
 
 ShowGuiLvRen(*) {
-    global gMainGui, gLvRenGui
-    if IsObject(gMainGui) {
-        gLvRenGui.Opt("+Owner" gMainGui.Hwnd)
-    }
-    gLvRenGui.Title := "旅人自动流星"
-    gLvRenGui.Show("w308 h312")
+    ExWindowHost.ShowOwned(gLvRenGui, ExText.LvRenTitle(), "w308 h312")
     LvRenLoadConfig()
-    DisableGuiMain()
 }
 
 HideGuiLvRen() {
-    gLvRenGui.Hide()
-    EnableGuiMain()
+    ExWindowHost.HideOwned(gLvRenGui)
 }
 
 LvRenGuiEscape(*) {
@@ -51,7 +44,7 @@ LvRenGuiClose(*) {
 }
 
 LvRenHelp(*) {
-    MsgBox("1、添加你想要发射流星的技能键`n2、设置游戏中流星的发射键（默认为Z）`n3、保存配置，启动连发并使用`n`nPS：建议和连发功能一起打开，效果更好", "如何使用旅人自动流星", "Iconi")
+    MsgBox(ExText.LvRenHelp(), ExText.LvRenHelpTitle(), "Icon!")
 }
 
 LvRenAddKey(*) {
@@ -60,12 +53,12 @@ LvRenAddKey(*) {
     key := GetKeycode.CanonMainKey(raw)
     if (key = "") {
         if (raw != "") {
-            MsgBox("仅支持主连发键盘上的键。",, "Icon!")
+            MsgBox(ExText.InvalidKey(),, "Icon!")
         }
         return
     }
     if IsValueInArray(key, __LvRenSkillKeys) {
-        MsgBox("请勿重复添加按键",, "Icon!")
+        MsgBox(ExText.DuplicateKey(),, "Icon!")
     } else {
         __LvRenSkillKeys.Push(key)
     }

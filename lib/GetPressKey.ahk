@@ -1,4 +1,4 @@
-GetPressKey() {
+﻿GetPressKey() {
     return GetUserInputKey()
 }
 
@@ -86,6 +86,18 @@ GetPressKeyIntoEdit(edit, afterCapture := unset) {
         capturing := false
     }
     if IsSet(afterCapture) {
-        afterCapture.Call(key)
+        needsEditArg := false
+        try {
+            if InStr(Type(afterCapture), "BoundFunc") {
+                needsEditArg := true
+            } else {
+                needsEditArg := afterCapture.MinParams >= 2
+            }
+        }
+        if needsEditArg {
+            afterCapture.Call(edit, key)
+        } else {
+            afterCapture.Call(key)
+        }
     }
 }

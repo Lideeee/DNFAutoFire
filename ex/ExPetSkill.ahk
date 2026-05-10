@@ -1,4 +1,4 @@
-; 宠物技能：监听键边沿发一发发射键；KeyRouter + 主进程
+﻿; 宠物技能：监听键边沿发一发发射键；KeyRouter + 主进程
 
 global _PetSkillShotKeyCode := ""
 global _PetSkillHotkeySubs := []

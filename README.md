@@ -1,167 +1,106 @@
-# DAF - 一款DNF连发工具
+﻿# DAF AutoFire
 
-## 功能简介
- - 多键位无冲突连发
- - 不影响打字
- - 仅DNF游戏窗口内激活
- - 自动使用管理员模式启动
- - 效能媲美Wegame内置连发(基于个人测试)
+## 项目结构
 
-## 贡献人员
-|                                                                             |                                                                              |
-| --------------------------------------------------------------------------- | ---------------------------------------------------------------------------- |
-| <img src="https://avatars.githubusercontent.com/u/7844572?v=4" width="128"> | <img src="https://avatars.githubusercontent.com/u/28993260?v=4" width="128"> |
-| [某亚瑟](https://github.com/mouyase)                                        | [Ousumu](https://github.com/1208041822)                                      |
-| 所有者                                                                      | 图标设计                                                                     |
+### 根目录
 
-## 更新日志
-### 2026-5-5 v0.2.8
- - [特性]添加了一键连招多配置
- - [特性]增加了连发间隔单独设置
- - [特性]加回了Alt、Ctrl、Shift、Tab等键的连发，并做了防卡键和触发优化
- - [优化]重写了整个软件的UI和连发原理
- - [优化]优化了一键连招的稳定性
- - [优化]现在配置识别只会在开启连发后生效，并大幅加快了识别速度
- - [优化]配置切换的提示移动到了窗口右下角，并且没有触发切换时不会弹出提示
- - [优化]修改了框选识别区域的按钮位置（技能识别区域应该是固定的，不同的配置都在同一个区域识别），并修改了说明文案
- - [优化]优化了截图框，现在截图框更符合实际截图区域
+- [DAFAutoFire.ahk](D:/06Code/DNFAutoFire/DAFAutoFire.ahk)：主入口脚本，负责按顺序装配核心模块、GUI 模块和 EX 功能模块。
+- [CHANGELOG.md](D:/06Code/DNFAutoFire/CHANGELOG.md)：历史说明与版本更新记录。
+- [config.ini](D:/06Code/DNFAutoFire/config.ini)：运行时配置文件。
 
-### 2026-5-5 v0.2.7
- - [特性]添加了自动识别功能
- - [优化]添加了一点文字说明
+### `core/` 核心逻辑
 
-### 2026-5-4 v0.2.6
- - [修复]修复了卡键问题
- - [修复]修复了自动奔跑自定义按键无法使用的问题
- - [优化]输入按键时Esc清空，并优化了所有功能面对空值的处理
+- [core/AppBootstrap.ahk](D:/06Code/DNFAutoFire/core/AppBootstrap.ahk)：应用启动收口，负责初始化、托盘、主窗口启动等流程。
+- [core/AutoFireController.ahk](D:/06Code/DNFAutoFire/core/AutoFireController.ahk)：连发主控制器，管理按键启停、热键绑定、运行态切换。
+- [core/Config.ahk](D:/06Code/DNFAutoFire/core/Config.ahk)：通用配置读写。
+- [core/FeatureModuleRegistry.ahk](D:/06Code/DNFAutoFire/core/FeatureModuleRegistry.ahk)：扩展功能模块注册表，统一描述 EX 功能与实现入口。
+- [core/GameContext.ahk](D:/06Code/DNFAutoFire/core/GameContext.ahk)：游戏窗口上下文判断。
+- [core/GetKeycode.ahk](D:/06Code/DNFAutoFire/core/GetKeycode.ahk)：按键采集、规范化、转换。
+- [core/KeyRouter.ahk](D:/06Code/DNFAutoFire/core/KeyRouter.ahk)：按键路由层，把热键事件分发到连发逻辑。
+- [core/PresetExFeatures.ahk](D:/06Code/DNFAutoFire/core/PresetExFeatures.ahk)：预设与 EX 功能开关/配置关联。
+- [core/PresetManager.ahk](D:/06Code/DNFAutoFire/core/PresetManager.ahk)：预设管理核心，负责创建、重命名、克隆、删除、排序和保存加载。
+- [core/PresetRecognition.ahk](D:/06Code/DNFAutoFire/core/PresetRecognition.ahk)：自动识别与自动切换预设逻辑。
+- [core/SendIP.ahk](D:/06Code/DNFAutoFire/core/SendIP.ahk)：输入发送辅助。
+- [core/SessionState.ahk](D:/06Code/DNFAutoFire/core/SessionState.ahk)：运行期状态缓存。
+- [core/SingleInstance.ahk](D:/06Code/DNFAutoFire/core/SingleInstance.ahk)：单实例接管。
 
+### `gui/` 通用 GUI 文案
 
-### 2026-4-26 v0.2.5
- - [特性]添加了一键连招功能
- - [优化]现在配置列表可以拖动修改位置了
+- [gui/GuiText.ahk](D:/06Code/DNFAutoFire/gui/GuiText.ahk)：通用窗口、通用短标签、系统级文本。
+- [gui/MainWindowText.ahk](D:/06Code/DNFAutoFire/gui/MainWindowText.ahk)：主窗口独有文案。
+- [gui/ExText.ahk](D:/06Code/DNFAutoFire/gui/ExText.ahk)：EX 功能配置窗口文案。
 
+### `gui/main/` 主窗口
 
-### 2026-4-24 v0.2.4
- - [特性]添加次元对决支持
- - [修复]再次尝试修复了卡键问题
+- [gui/main/Main.ahk](D:/06Code/DNFAutoFire/gui/main/Main.ahk)：主窗口入口，事件转发、菜单、全局控件表、主窗口内部模块装配。
+- [gui/main/MainWindow.ahk](D:/06Code/DNFAutoFire/gui/main/MainWindow.ahk)：创建主窗口，组装布局和 builder。
+- [gui/main/MainController.ahk](D:/06Code/DNFAutoFire/gui/main/MainController.ahk)：主窗口行为控制，如显示隐藏、启动连发、保存界面状态。
+- [gui/main/MainKeyGrid.ahk](D:/06Code/DNFAutoFire/gui/main/MainKeyGrid.ahk)：按键区交互和按键高亮状态刷新。
+- [gui/main/MainPresetPanel.ahk](D:/06Code/DNFAutoFire/gui/main/MainPresetPanel.ahk)：预设区交互，负责预设列表、右键菜单、拖拽排序、独立间隔设置。
+- [gui/main/MainFeaturePanel.ahk](D:/06Code/DNFAutoFire/gui/main/MainFeaturePanel.ahk)：扩展开关区交互，负责开关绘制和 EX 入口点击。
 
-### 2026-4-17 v0.2.3
- - [优化]大幅提升连发流畅度，平X不会偶尔断续了
- - [优化]宠物技能改为只在按下触发键时触发一次，不会跟随主键连发
- - [优化]关羽猛攻改为只在按下触发键延迟后触发一次，不会跟随主键连发
- - [优化]旅人和战法的ex功能现在会跟随全局的连发延迟
+### `gui/main/builders/` 主窗口搭建件
 
+- [gui/main/builders/MainKeyPanelBuilder.ahk](D:/06Code/DNFAutoFire/gui/main/builders/MainKeyPanelBuilder.ahk)：搭建按键面板。
+- [gui/main/builders/MainConfigPanelBuilder.ahk](D:/06Code/DNFAutoFire/gui/main/builders/MainConfigPanelBuilder.ahk)：搭建预设和配置面板。
+- [gui/main/builders/MainActionButtonBuilder.ahk](D:/06Code/DNFAutoFire/gui/main/builders/MainActionButtonBuilder.ahk)：搭建主窗口操作按钮。
+- [gui/main/builders/MainExFeatureBuilder.ahk](D:/06Code/DNFAutoFire/gui/main/builders/MainExFeatureBuilder.ahk)：搭建扩展功能区。
 
-### 2026-4-15 v0.2.2
- - [修复]修复连发按键冲突导致的卡键问题
+### `gui/main/layout/` 主窗口布局数据
 
-### 2026-4-14 v0.2.1
- - [优化]重构配置管理：修改后自动保存，切换配置即时生效
- - [特性]配置列表支持右键管理：新建、重命名、克隆、删除
- - [特性]新增自动宠物技能功能
- - [优化]新增连发间隔调整，默认为20ms
- - [优化]“检查更新”按钮改为直接打开原帖地址
+- [gui/main/layout/MainLayout.ahk](D:/06Code/DNFAutoFire/gui/main/layout/MainLayout.ahk)：主窗口整体尺寸和坐标规则。
+- [gui/main/layout/MainKeyLayoutData.ahk](D:/06Code/DNFAutoFire/gui/main/layout/MainKeyLayoutData.ahk)：按键区布局数据。
+- [gui/main/layout/MainExFeatureLayoutData.ahk](D:/06Code/DNFAutoFire/gui/main/layout/MainExFeatureLayoutData.ahk)：扩展功能区布局数据。
 
+### `gui/dialogs/` 独立弹窗
 
-### 2026-4-14 v0.2.0
- - [优化]基于AHK V2重写了整个项目，代替原来的AHK V1
- - [优化]优化了界面布局
- - [特性]去除了启动连发的提示音
- - [特性]新增了自动奔跑（一键奔跑）功能
- - [特性]新增关羽自动战戟猛攻（来自@lcmkc）
- - [特性]去除了原地平A功能
+- [gui/dialogs/Setting.ahk](D:/06Code/DNFAutoFire/gui/dialogs/Setting.ahk)：设置弹窗视图。
+- [gui/dialogs/SettingController.ahk](D:/06Code/DNFAutoFire/gui/dialogs/SettingController.ahk)：设置弹窗行为与保存逻辑。
+- [gui/dialogs/QuickSwitch.ahk](D:/06Code/DNFAutoFire/gui/dialogs/QuickSwitch.ahk)：快速切换预设弹窗视图。
+- [gui/dialogs/QuickSwitchController.ahk](D:/06Code/DNFAutoFire/gui/dialogs/QuickSwitchController.ahk)：快速切换弹窗行为。
+- [gui/dialogs/PresetAutoSwitch.ahk](D:/06Code/DNFAutoFire/gui/dialogs/PresetAutoSwitch.ahk)：自动切换预设弹窗视图。
+- [gui/dialogs/PresetAutoSwitchController.ahk](D:/06Code/DNFAutoFire/gui/dialogs/PresetAutoSwitchController.ahk)：自动切换预设行为。
+- [gui/dialogs/PresetRegionPicker.ahk](D:/06Code/DNFAutoFire/gui/dialogs/PresetRegionPicker.ahk)：截图框选与识别区域拾取。
 
-### 2023-7-12 v0.1.2Fix3
- - [修复]修复小键盘部分功能失灵
- - [优化]优化启动连发后需要再点一下游戏窗口的问题
+### `gui/ex/` 扩展功能配置窗口
 
-### 2023-7-12 v0.1.2Fix2
- - [修复]修复剑宗，战法，旅人功能失效
- - [优化]优化克隆配置时不能克隆功能详细的按键设置
+- [gui/ex/ExWindowHost.ahk](D:/06Code/DNFAutoFire/gui/ex/ExWindowHost.ahk)：EX 弹窗公共宿主，负责 owned window 显示隐藏。
+- [gui/ex/LvRen.ahk](D:/06Code/DNFAutoFire/gui/ex/LvRen.ahk)：旅人配置窗口。
+- [gui/ex/GuanYu.ahk](D:/06Code/DNFAutoFire/gui/ex/GuanYu.ahk)：关羽配置窗口。
+- [gui/ex/PetSkill.ahk](D:/06Code/DNFAutoFire/gui/ex/PetSkill.ahk)：宠物技能配置窗口。
+- [gui/ex/ZhanFa.ahk](D:/06Code/DNFAutoFire/gui/ex/ZhanFa.ahk)：战法配置窗口。
+- [gui/ex/JianZong.ahk](D:/06Code/DNFAutoFire/gui/ex/JianZong.ahk)：剑宗配置窗口。
+- [gui/ex/AutoRun.ahk](D:/06Code/DNFAutoFire/gui/ex/AutoRun.ahk)：自动跑图配置窗口。
+- [gui/ex/Combo.ahk](D:/06Code/DNFAutoFire/gui/ex/Combo.ahk)：一键连招配置窗口。
+- [gui/ex/PresetSkillIcon.ahk](D:/06Code/DNFAutoFire/gui/ex/PresetSkillIcon.ahk)：预设技能识别图配置窗口。
 
-### 2023-7-12 v0.1.2Fix1
- - [修复]修复通用设置内文字空白
- - [修复]修复无法使用游戏内自动捡物功能
- - [修复]修复太宗帝剑延迟失灵
- - [修复]修复某些情况下报错提示sc00 is not a valid key name的问题
- - [优化]优化了更新服务器，也许可以提高自动更新的成功率
+### `ex/` 扩展功能实现
 
-### 2023-7-11 v0.1.2
- - [特性]增加了软件设置窗口
- - [特性]可以设置软件打开后自动启动连发
- - [特性]可以设置开机自动打开软件
- - [特性]可以设置是否游戏内屏蔽Windows键
- - [修复]修复了删除全部配置后会出现一个空配置的问题
- - [修复]修复了太宗帝剑延迟失灵的问题
- - [优化]优化了部分窗口隐藏逻辑
- - [优化]优化了更新服务器，也许可以提高自动更新的成功率
- - [优化]优化了部分配置相关代码
+- [ex/ExLvRen.ahk](D:/06Code/DNFAutoFire/ex/ExLvRen.ahk)：旅人 EX 逻辑实现。
+- [ex/ExGuanYu.ahk](D:/06Code/DNFAutoFire/ex/ExGuanYu.ahk)：关羽 EX 逻辑实现。
+- [ex/ExPetSkill.ahk](D:/06Code/DNFAutoFire/ex/ExPetSkill.ahk)：宠物技能 EX 逻辑实现。
+- [ex/ExZhanFa.ahk](D:/06Code/DNFAutoFire/ex/ExZhanFa.ahk)：战法 EX 逻辑实现。
+- [ex/ExJianZong.ahk](D:/06Code/DNFAutoFire/ex/ExJianZong.ahk)：剑宗 EX 逻辑实现。
+- [ex/ExAutoRun.ahk](D:/06Code/DNFAutoFire/ex/ExAutoRun.ahk)：自动跑图逻辑实现。
+- [ex/ExCombo.ahk](D:/06Code/DNFAutoFire/ex/ExCombo.ahk)：一键连招逻辑实现。
 
-### 2023-7-7 v0.1.1
- - [特性]增加了全职业原地平X功能(测试版)
- - [修复]修复了快速切换窗口不能按回车点击按钮
- - [修复]修复了打开快速切换窗口热键设置的异常
- - [优化]优化按键输入逻辑
- - [优化]优化快速切换窗口，现在可以双击列表选项切换配置
+### `lib/` 公共库与 UI 主题
 
-### 2023-7-4 v0.1.0
- - [特性]增加了切换配置的提示
- - [特性]增加了连发状态的托盘图标样式
- - [特性]增加了自定义快速切换窗口快捷键的功能
- - [特性]增加了可以在快速切换窗口中按空格切换配置
- - [修复]修复了Shift，Alt，Ctrl在某些情况下会卡住的情况
- - [修复]修复了旅人自动流星概率发射失败的问题
- - [优化]优化了逻辑判断，减少了CPU的占用
- - [优化]优化按键输入逻辑，减少了按键输入延迟
- - [优化]优化了部分窗口可以点X或者按Esc关闭
+- [lib/GuiTheme.ahk](D:/06Code/DNFAutoFire/lib/GuiTheme.ahk)：GUI 主题、按钮样式、开关样式、列表样式。
+- [lib/UiTheme.ahk](D:/06Code/DNFAutoFire/lib/UiTheme.ahk)：底层主题参数。
+- [lib/FlatButtonGdip.ahk](D:/06Code/DNFAutoFire/lib/FlatButtonGdip.ahk)：GDI+ 按钮绘制。
+- [lib/ToggleGdip.ahk](D:/06Code/DNFAutoFire/lib/ToggleGdip.ahk)：GDI+ 开关绘制。
+- [lib/GdipUiHelpers.ahk](D:/06Code/DNFAutoFire/lib/GdipUiHelpers.ahk)：GDI+ UI 辅助函数。
+- [lib/GdiPlusSession.ahk](D:/06Code/DNFAutoFire/lib/GdiPlusSession.ahk)：GDI+ 生命周期封装。
+- [lib/GetPressKey.ahk](D:/06Code/DNFAutoFire/lib/GetPressKey.ahk)：按键捕获辅助。
+- [lib/Keys.ahk](D:/06Code/DNFAutoFire/lib/Keys.ahk)：按键数据与键盘布局相关工具。
+- [lib/JSON.ahk](D:/06Code/DNFAutoFire/lib/JSON.ahk)：JSON 读写库。
+- [lib/Time.ahk](D:/06Code/DNFAutoFire/lib/Time.ahk)：时间辅助。
+- [lib/RunWithAdministrator.ahk](D:/06Code/DNFAutoFire/lib/RunWithAdministrator.ahk)：管理员权限启动辅助。
+- [lib/Log.ahk](D:/06Code/DNFAutoFire/lib/Log.ahk)：调试日志辅助。
 
-### 2023-6-30 v0.0.10
- - [修复]修复了配置保存时的逻辑问题
- - [优化]优化了按键触发逻辑
- - [特性]增加了战法自动炫纹功能
- - [特性]增加了太宗帝剑延迟功能
+### `assets/` 资源文件
 
-### 2023-6-30 v0.0.9
- - [修复]修复了切换配置导致按键失灵的问题
- - [优化]优化了配置切换逻辑
- - [优化]优化了自动更新流程，现在可以自动释放更新脚本
- - [特性]增加了旅人自动流星功能
- - [特性]增加了基本使用说明
-
-### 2023-6-29 v0.0.8
- - 优化了连发效率
- - 增加了自动更新功能
-
-### 2023-6-28 v0.0.7
- - 增加了在游戏中按下 Alt + ` 可以弹出快速切换窗口
- - 在快速切换窗口中可以按上下键选择预设，按回车切换预设并开启连发
- - 优化代码结构
- - 优化设置文件结构，旧设置会失效
- - 为连发开启与关闭添加声音提示
- - 去除托盘中错误的菜单选项
-
-### 2023-6-27 v0.0.6
- - 修复Caps等按键原有功能失效
- - 修复Num0失灵
- - 修复部分功能按键失灵
-
-### 2023-6-27 v0.0.5
- - 修复部分按键失灵的问题
-
-### 2023-6-27 v0.0.4
- - 优化了按键触发逻辑，减少卡键问题
- - 优化了Shift，Ctrl和Alt的触发
- - 去掉了左上角连发启动的提示，改为托盘图标变更
- - 增加了连发启动的提示音
- - 更换了新的图标
-
-### 2023-6-25 v0.0.3
- - 修复了X键不生效的错误
- - 优化了图标获取方式，压缩包里不再需要图标文件
-
-### 2023-6-24 v0.0.2
- - 优化了实现逻辑，减少了CPU占用
-
-### 2023-6-24 v0.0.1
- - 首次发布的版本
- - 实现了最基础的连发功能
+- `assets/icons/`：程序图标与托盘状态图标。
+- `assets/preset-recognition/skills/`：预设技能识别图。
+- `assets/preset-recognition/calibrate/`：血量校准图。

@@ -1,4 +1,4 @@
-#Requires AutoHotkey v2.0
+﻿#Requires AutoHotkey v2.0
 
 class GdipUiHelpers {
     static PixelFormat32bppARGB := 0x26200A
@@ -74,6 +74,8 @@ class GdipUiHelpers {
         if (text = "") {
             return
         }
+        try DllCall("gdiplus\GdipSetTextRenderingHint", "ptr", gr, "int", 5) ; ClearTypeGridFit
+        try DllCall("gdiplus\GdipSetPixelOffsetMode", "ptr", gr, "int", 2) ; Half
         ff := 0
         st := DllCall("gdiplus\GdipCreateFontFamilyFromName", "wstr", face, "ptr", 0, "ptr*", &ff := 0)
         if (st != 0 || !ff) {
@@ -91,14 +93,10 @@ class GdipUiHelpers {
                 }
                 try {
                     pFmt := 0
-                    pFmt := 0
-                    if DllCall("gdiplus\GdipStringFormatGetGenericTypographic", "ptr*", &pFmt := 0) != 0 || !pFmt {
-                        if DllCall("gdiplus\GdipStringFormatGetGenericDefault", "ptr*", &pFmt := 0) != 0 || !pFmt {
-                            return
-                        }
+                    if DllCall("gdiplus\GdipStringFormatGetGenericDefault", "ptr*", &pFmt := 0) != 0 || !pFmt {
+                        return
                     }
                     try {
-                        DllCall("gdiplus\GdipSetStringFormatFlags", "ptr", pFmt, "int", 0x1000 | 0x800) ; LineLimit | NoFitBlackBox
                         DllCall("gdiplus\GdipSetStringFormatAlign", "ptr", pFmt, "int", 1) ; Center
                         DllCall("gdiplus\GdipSetStringFormatLineAlign", "ptr", pFmt, "int", 1) ; Center
                         rf := Buffer(16, 0)
@@ -163,8 +161,6 @@ class GdipUiHelpers {
                 }
                 this.FillRoundRect(gr, bg, pad, pad, w - 2 * pad, h - 2 * pad, rr)
                 this.StrokeRoundRect(gr, 0x33000000, pad, pad, w - 2 * pad, h - 2 * pad, rr, 1)
-                fs := (w < 48 || h < 28) ? 8.5 : 9.5
-                this.DrawStringCentered(gr, text, UiTheme.Face, fs, fg, 0, 0, w, h)
             } finally {
                 DllCall("gdiplus\GdipDeleteGraphics", "ptr", gr)
             }

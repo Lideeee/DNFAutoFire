@@ -1,8 +1,6 @@
-#Requires AutoHotkey v2.0
+﻿#Requires AutoHotkey v2.0
 
-; 单实例：与主脚本中 #SingleInstance Off 配合，用命名互斥体保证仅一个进程；
-; 再次启动时尝试激活已有主窗口（标题含「DAF连发工具」）后退出。
-
+; 自定义单实例控制：重复启动时关闭现有实例，再由新实例继续启动。
 global __SingleInstance_hMutex := 0
 
 SingleInstance_MutexName() {
@@ -22,20 +20,29 @@ SingleInstance_TryHandOffAndExit() {
     name := SingleInstance_MutexName()
     DllCall("kernel32\SetLastError", "UInt", 0)
     __SingleInstance_hMutex := DllCall("kernel32\CreateMutexW", "Ptr", 0, "Int", false, "WStr", name, "Ptr")
-    if DllCall("kernel32\GetLastError", "UInt") != 183 { ; ERROR_ALREADY_EXISTS
+    if DllCall("kernel32\GetLastError", "UInt") != 183 {
         return
     }
+    DetectHiddenWindows(true)
+    SetTitleMatchMode(2)
     try {
-        if hwnd := WinExist("DAF连发工具") {
-            WinActivate(hwnd)
+        hwnd := WinExist("DAF连发工具 - DNF AutoFire")
+        if !hwnd {
+            hwnd := WinExist("DAF连发工具")
+        }
+        if hwnd {
+            winRef := "ahk_id " hwnd
+            WinClose(winRef)
+            WinWaitClose(winRef,, 3)
         }
     }
+    DetectHiddenWindows(false)
     h := __SingleInstance_hMutex
     __SingleInstance_hMutex := 0
     if h {
         DllCall("kernel32\CloseHandle", "Ptr", h)
     }
-    ExitApp()
+    Sleep(300)
 }
 
 SingleInstance_ReleaseMutex() {

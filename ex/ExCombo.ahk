@@ -1,4 +1,4 @@
-; 自动连招：KeyRouter 监听触发键 + 负定时器链执行技能间隔（主进程，非阻塞）
+﻿; 自动连招：KeyRouter 监听触发键 + 负定时器链执行技能间隔（主进程，非阻塞）
 
 global _ComboSkills := []
 global _ComboTriggerPressKey := ""

@@ -1,4 +1,4 @@
-; 简化版 JSON 读取器：满足本项目更新接口的字段读取需求
+﻿; 简化版 JSON 读取器：满足本项目更新接口的字段读取需求
 JSON2Object(str) {
     obj := Map()
     obj["assets"] := []

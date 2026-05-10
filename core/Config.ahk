@@ -1,4 +1,4 @@
-; 始终使用主脚本目录下的 config.ini（勿用裸 "config.ini"，否则 CWD 非脚本目录时读写不一致、列表为空）
+﻿; 始终使用主脚本目录下的 config.ini（勿用裸 "config.ini"，否则 CWD 非脚本目录时读写不一致、列表为空）
 
 class ConfigStore {
     static IniPath => A_ScriptDir "\config.ini"

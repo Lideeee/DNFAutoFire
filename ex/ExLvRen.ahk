@@ -1,4 +1,4 @@
-; 旅人：与战法相同模式——监听键任一按住则以主间隔发发射键（KeyRouter + 主进程）
+﻿; 旅人：与战法相同模式——监听键任一按住则以主间隔发发射键（KeyRouter + 主进程）
 
 global _LvRenKeyHeld := Map()
 global _LvRenActiveCount := 0

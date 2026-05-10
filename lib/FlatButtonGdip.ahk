@@ -1,4 +1,4 @@
-#Requires AutoHotkey v2.0
+﻿#Requires AutoHotkey v2.0
 
 class FlatButtonGdip {
     static _all := []
@@ -14,7 +14,9 @@ class FlatButtonGdip {
         this._state := "normal"
         this._parseOpts(opts)
         this._assignBitmap(GdipUiHelpers.RenderButtonBitmap(this.w, this.h, this.text, this._state, this.primary))
+        this._ensureLabel()
         this.ctrl.OnEvent("Click", this._OnClick.Bind(this))
+        this.label.OnEvent("Click", this._OnClick.Bind(this))
         FlatButtonGdip._all.Push(this)
         FlatButtonGdip._EnsureTimer()
     }
@@ -54,6 +56,42 @@ class FlatButtonGdip {
         }
     }
 
+    _ensureLabel() {
+        textOpts := "x" this.x " y" this.y " w" this.w " h" this.h " +0x200 +Center BackgroundTrans"
+        if this.HasOwnProp("label") && IsObject(this.label) {
+            this.label.Move(this.x, this.y, this.w, this.h)
+            this.label.Text := this.text
+        } else {
+            this.label := this.gui.Add("Text", textOpts, this.text)
+        }
+        this._restyleLabel()
+    }
+
+    _restyleLabel() {
+        if !this.HasOwnProp("label") || !IsObject(this.label) {
+            return
+        }
+        color := this.primary ? UiTheme.BtnPrimaryText : UiTheme.BtnText
+        if !this.enabled {
+            color := "94A3B8"
+        }
+        size := this._labelFontSize()
+        this.label.SetFont("s" size " norm c" color, UiTheme.Face)
+    }
+
+    _labelFontSize() {
+        if (this.h >= 56) {
+            return 10
+        }
+        if (this.h >= 36) {
+            return 10
+        }
+        if (this.h >= 28) {
+            return 9
+        }
+        return 8
+    }
+
     static _EnsureTimer() {
         if FlatButtonGdip._timerOn {
             return
@@ -84,8 +122,10 @@ class FlatButtonGdip {
         if !hw {
             return
         }
+        textHw := 0
+        try textHw := this.label.Hwnd
         MouseGetPos(, , &under)
-        over := (under = hw)
+        over := (under = hw || under = textHw)
         lb := GetKeyState("LButton", "P")
         ns := "normal"
         if over && lb {
@@ -104,6 +144,7 @@ class FlatButtonGdip {
     _redraw() {
         st := this.enabled ? this._state : "disabled"
         this._assignBitmap(GdipUiHelpers.RenderButtonBitmap(this.w, this.h, this.text, st, this.primary))
+        this._restyleLabel()
     }
 
     _OnClick(*) {

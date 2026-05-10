@@ -1,4 +1,4 @@
-#Requires AutoHotkey v2.0
+﻿#Requires AutoHotkey v2.0
 
 class ToggleGdip {
     __New(gui, x, y, tw, th) {

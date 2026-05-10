@@ -1,4 +1,4 @@
-; 关羽：按下监听键边沿后延迟一发发射键；KeyRouter + 主进程
+﻿; 关羽：按下监听键边沿后延迟一发发射键；KeyRouter + 主进程
 
 global _GuanYuShotKeyCode := ""
 global _GuanYuDelayMs := 300

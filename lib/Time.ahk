@@ -1,4 +1,4 @@
-; 解除系统的Time限制，让Time可以小于10ms
+﻿; 解除系统的Time限制，让Time可以小于10ms
 UnlockSystemTimeLimit(){
     DllCall("Winmm\timeBeginPeriod", "UInt", 1)
 }

@@ -1,4 +1,4 @@
-#Requires AutoHotkey v2.0
+﻿#Requires AutoHotkey v2.0
 
 ; 设计 token（与旧全局 GuiTheme_* 对齐，便于 GDI+ 与经典 Text 控件共用）。
 class UiTheme {
@@ -13,9 +13,9 @@ class UiTheme {
     static BtnText := "334155"
     static BtnPrimaryBg := "3B82F6"
     static BtnPrimaryText := "FFFFFF"
-    static RadiusSm := 6
-    static RadiusMd := 8
-    static RadiusLg := 10
+    static RadiusSm := 0
+    static RadiusMd := 0
+    static RadiusLg := 0
     static MutedLink := "64748B"
     static MutedLinkHover := "5B84D9"
 }
