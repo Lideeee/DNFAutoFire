@@ -14,6 +14,8 @@ global GuiTheme_SwitchTrackOn := UiTheme.SwitchTrackOn
 global GuiTheme__LbWheelHwnds := Map()
 global GuiTheme__HandCursorHwnds := Map()
 global GuiTheme__HandCursorHandle := 0
+global GuiTheme__FocusSinkByGuiHwnd := Map()
+global GuiTheme__GuiByHwnd := Map()
 
 GuiTheme_Apply(gui) {
     if !IsObject(gui) {
@@ -26,6 +28,93 @@ GuiTheme_Apply(gui) {
         cursorHooked := true
         OnMessage(0x0020, GuiTheme__OnSetCursor)
     }
+    GuiTheme_EnableBlankClickBlur(gui)
+}
+
+GuiTheme_EnableBlankClickBlur(gui) {
+    global GuiTheme__FocusSinkByGuiHwnd, GuiTheme__GuiByHwnd
+    if !IsObject(gui) {
+        return
+    }
+    try guiHwnd := gui.Hwnd
+    catch {
+        return
+    }
+    if !guiHwnd {
+        return
+    }
+    if !GuiTheme__FocusSinkByGuiHwnd.Has(guiHwnd) {
+        sink := gui.Add("Edit", "x-100 y-100 w1 h1 -WantCtrlA -WantReturn")
+        GuiTheme__FocusSinkByGuiHwnd[guiHwnd] := sink
+    }
+    GuiTheme__GuiByHwnd[guiHwnd] := gui
+    static blurHooked := false
+    if !blurHooked {
+        blurHooked := true
+        OnMessage(0x0201, GuiTheme__OnLButtonDownBlur)
+    }
+}
+
+GuiTheme_FocusSink(gui) {
+    global GuiTheme__FocusSinkByGuiHwnd
+    if !IsObject(gui) {
+        return
+    }
+    try guiHwnd := gui.Hwnd
+    catch {
+        return
+    }
+    if !GuiTheme__FocusSinkByGuiHwnd.Has(guiHwnd) {
+        return
+    }
+    sink := GuiTheme__FocusSinkByGuiHwnd[guiHwnd]
+    try sink.Focus()
+}
+
+GuiTheme__GetClassName(hwnd) {
+    if !hwnd {
+        return ""
+    }
+    buf := Buffer(256, 0)
+    len := DllCall("user32\GetClassName", "ptr", hwnd, "ptr", buf, "int", 128, "int")
+    if (len <= 0) {
+        return ""
+    }
+    return StrGet(buf, len)
+}
+
+GuiTheme__IsInputClass(className) {
+    return (className = "Edit"
+        || className = "ListBox"
+        || className = "ComboBox"
+        || className = "msctls_hotkey32")
+}
+
+GuiTheme__OnLButtonDownBlur(wParam, lParam, msg, hwnd) {
+    global GuiTheme__FocusSinkByGuiHwnd, GuiTheme__GuiByHwnd
+    if !hwnd {
+        return
+    }
+    rootHwnd := DllCall("user32\GetAncestor", "ptr", hwnd, "uint", 2, "ptr")
+    if !rootHwnd || !GuiTheme__FocusSinkByGuiHwnd.Has(rootHwnd) || !GuiTheme__GuiByHwnd.Has(rootHwnd) {
+        return
+    }
+    sink := GuiTheme__FocusSinkByGuiHwnd[rootHwnd]
+    try sinkHwnd := sink.Hwnd
+    catch {
+        return
+    }
+    if (hwnd = sinkHwnd) {
+        return
+    }
+    if (hwnd != rootHwnd) {
+        className := GuiTheme__GetClassName(hwnd)
+        if GuiTheme__IsInputClass(className) {
+            return
+        }
+    }
+    guiObj := GuiTheme__GuiByHwnd[rootHwnd]
+    SetTimer((*) => GuiTheme_FocusSink(guiObj), -1)
 }
 
 ; GDI+ 圆角按钮；primary 为真时使用主色（保存等强调按钮）。
@@ -313,6 +402,7 @@ GuiTheme_ShowFit(gui, extraOpts := "", rightPad := 16, bottomPad := 16, minW := 
         opts .= " "
     }
     gui.Show(opts . "w" w . " h" h)
+    SetTimer((*) => GuiTheme_FocusSink(gui), -1)
 }
 
 #Include GdipUiHelpers.ahk

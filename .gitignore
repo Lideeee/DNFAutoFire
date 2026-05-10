@@ -1,5 +1,8 @@
-﻿.vscode
+.vscode
 .idea
 
 preset_calibrate_icons/
 preset_skill_icons/
+tools/
+README-keyboard-layout.md
+检查修复AHK编码.bat

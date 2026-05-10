@@ -87,6 +87,9 @@ class MainKeyCap {
         this.gui := gui
         this.name := name
         this.label := label
+        this.ctrl := 0
+        this.labelCtrl := 0
+        this.auxLabelCtrl := 0
         this.displayLabel := this._displayLabel(label)
         this.locked := !!locked
         this.visualState := this.locked ? "locked" : "off"

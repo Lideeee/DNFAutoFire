@@ -175,6 +175,7 @@ PresetRegionPickOpen(kind := "skill") {
     gRegionPickGui.MarginX := 0
     gRegionPickGui.MarginY := 0
     gRegionPickGui.BackColor := "FFFFFF"
+    GuiTheme_EnableBlankClickBlur(gRegionPickGui)
     gRegionPickGui.OnEvent("Close", PresetRegionPickCancel)
     gRegionPickGui.Show("Hide w200 h90")
     hwnd := gRegionPickGui.Hwnd
@@ -217,6 +218,7 @@ PresetRegionPickOpen(kind := "skill") {
         eraseHooked := true
     }
     DllCall("user32\SetWindowPos", "ptr", hwnd, "ptr", 0, "int", 0, "int", 0, "int", 0, "int", 0, "uint", 0x0027)
+    SetTimer((*) => GuiTheme_FocusSink(gRegionPickGui), -1)
 }
 
 PresetRegionPickNCHitTest(wParam, lParam, msg, hwnd) {

@@ -46,7 +46,6 @@ class QuickSwitchController {
         } else if (cnt > 0) {
             ctrl.Choose(1)
         }
-        ctrl.Focus()
         OnMessage(0x0100, QuickSwitchOnSpacePress)
     }
 

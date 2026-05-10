@@ -8,6 +8,7 @@ class ExWindowHost {
         }
         guiObj.Title := title
         guiObj.Show(sizeSpec)
+        SetTimer((*) => GuiTheme_FocusSink(guiObj), -1)
         if IsObject(loadCallback) {
             loadCallback.Call()
         }

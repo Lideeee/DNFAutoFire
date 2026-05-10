@@ -1,6 +1,8 @@
 ﻿#Requires AutoHotkey v2.0
 
 class MainController {
+    static _persisting := false
+
     static Show(*) {
         global gMainGui
         try PresetRecognition_CancelPending()
@@ -33,6 +35,9 @@ class MainController {
     }
 
     static Start(*) {
+        if !this.SaveCurrentPreset() {
+            return
+        }
         this.Hide()
         AutoFireController.Start()
         try PresetRecognition_StartSequenceFromMainStart()
@@ -55,20 +60,6 @@ class MainController {
         ShowGuiAutoPresetSettings()
     }
 
-    static SaveMainViewState() {
-        presetName := GetNowSelectPreset()
-        if (presetName = "") {
-            return
-        }
-        featureStates := Map()
-        for featureName, fieldName in PresetManager.FeatureFieldMap {
-            featureStates[featureName] := MainGetCtrl(featureName).Value
-        }
-        PresetManager.SaveFeatureStates(presetName, featureStates)
-        PresetManager.SaveAutoFireInterval(presetName, this.NormalizeAutoFireInterval())
-        PresetManager.SaveAutoFirePressDuration(presetName, this.NormalizeAutoFirePressDuration())
-    }
-
     static LoadMainViewState() {
         state := PresetManager.LoadMainViewState(GetNowSelectPreset())
         for featureName, enabled in state.featureStates {
@@ -87,25 +78,68 @@ class MainController {
         return n
     }
 
-    static SaveAutoFireInterval(*) {
-        presetName := GetNowSelectPreset()
+    static FlushPendingTimingCommits() {
+        return this.CommitCurrentPresetUi(false)
+    }
+
+    static CollectFeatureStates() {
+        featureStates := Map()
+        for featureName, fieldName in PresetManager.FeatureFieldMap {
+            featureStates[featureName] := MainGetCtrl(featureName).Value
+        }
+        return featureStates
+    }
+
+    static CommitCurrentPresetUi(saveAll := false, presetName := unset) {
+        Critical("On")
+        if this._persisting {
+            Critical("Off")
+            return false
+        }
+        if !IsSet(presetName) {
+            presetName := GetNowSelectPreset()
+        }
         if (presetName = "") {
-            return
+            Critical("Off")
+            return false
         }
-        ctrl := MainGetCtrl("MainAutoFireInterval")
-        raw := Trim(ctrl.Text)
-        if (raw = "") {
-            return
+        this._persisting := true
+        try {
+            if !this.PersistMainTimingFromUi(presetName) {
+                return false
+            }
+            if saveAll {
+                this.PruneObsoleteKeyIntervals(presetName)
+                PresetManager.SaveEnabledKeys(presetName, SessionState.AutoFireEnableKeys)
+                PresetManager.SaveFeatureStates(presetName, this.CollectFeatureStates())
+            }
+            return true
+        } finally {
+            this._persisting := false
+            Critical("Off")
         }
-        PresetManager.SaveAutoFireInterval(presetName, raw)
+    }
+
+    static PersistMainTimingFromUi(presetName := unset) {
+        if !IsSet(presetName) {
+            presetName := GetNowSelectPreset()
+        }
+        if (presetName = "") {
+            return false
+        }
+        intervalVal := this.NormalizeAutoFireInterval()
+        pressDurationVal := this.NormalizeAutoFirePressDuration()
+        PresetManager.SaveAutoFireInterval(presetName, intervalVal)
+        PresetManager.SaveAutoFirePressDuration(presetName, pressDurationVal)
+        return true
+    }
+
+    static SaveAutoFireInterval(*) {
+        return
     }
 
     static CommitAutoFireInterval(*) {
-        presetName := GetNowSelectPreset()
-        if (presetName = "") {
-            return
-        }
-        PresetManager.SaveAutoFireInterval(presetName, this.NormalizeAutoFireInterval())
+        return this.CommitCurrentPresetUi(false)
     }
 
     static NormalizeAutoFirePressDuration() {
@@ -116,28 +150,15 @@ class MainController {
     }
 
     static SaveAutoFirePressDuration(*) {
-        presetName := GetNowSelectPreset()
-        if (presetName = "") {
-            return
-        }
-        ctrl := MainGetCtrl("MainAutoFirePressDuration")
-        raw := Trim(ctrl.Text)
-        if (raw = "") {
-            return
-        }
-        PresetManager.SaveAutoFirePressDuration(presetName, raw)
+        return
     }
 
     static CommitAutoFirePressDuration(*) {
-        presetName := GetNowSelectPreset()
-        if (presetName = "") {
-            return
-        }
-        PresetManager.SaveAutoFirePressDuration(presetName, this.NormalizeAutoFirePressDuration())
+        return this.CommitCurrentPresetUi(false)
     }
 
     static SaveExToggle(*) {
-        this.SaveMainViewState()
+        this.SaveCurrentPreset()
     }
 
     static PruneObsoleteKeyIntervals(presetName) {
@@ -145,13 +166,7 @@ class MainController {
     }
 
     static SaveCurrentPreset() {
-        presetName := GetNowSelectPreset()
-        if (presetName = "") {
-            return
-        }
-        this.PruneObsoleteKeyIntervals(presetName)
-        PresetManager.SaveEnabledKeys(presetName, SessionState.AutoFireEnableKeys)
-        this.SaveMainViewState()
+        return this.CommitCurrentPresetUi(true)
     }
 
     static RegisterQuickSwitchOnly(keyWithoutTildeDollar) {
