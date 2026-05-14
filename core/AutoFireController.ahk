@@ -45,6 +45,7 @@ class AutoFireService {
         defaultIntervalMs := PresetManager.NormalizeInterval(LoadPreset(presetName, "MainAutoFireInterval", PresetManager.DefaultAutoFireInterval))
         pressDurationMs := PresetManager.NormalizePressDuration(LoadPreset(presetName, "MainAutoFirePressDuration", PresetManager.DefaultAutoFirePressDuration))
         keyIntervalOverrides := PresetManager.LoadKeyIntervalOverrides(presetName)
+        SendIP_ReleaseMany(CollectSyntheticReleaseTokens(presetName))
         MultipleThread.StopAllThreads()
         for keyName in SessionState.AutoFireEnableKeys {
             AutoFireController.UseBlockingOriginalKeyMode(keyName)
@@ -66,6 +67,7 @@ class AutoFireService {
     }
 
     static StopSession() {
+        SendIP_ReleaseMany(CollectSyntheticReleaseTokens(SessionState.GetCurrentPreset()))
         allKeys := GetAllKeys()
         for keyName in allKeys {
             AutoFireController.RestoreOriginalKeyMode(keyName)

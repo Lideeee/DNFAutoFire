@@ -58,6 +58,7 @@ class MultipleThread {
             }
             this._Dispatch(runName)
         } finally {
+            try SendIP_ReleaseAll()
             if timerRaised {
                 try RestoreSystemTimeLimit()
             }

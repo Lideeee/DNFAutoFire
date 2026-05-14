@@ -1,57 +1,104 @@
-; 宠物技能：子进程轮询监听键边沿，每次按下发一发。
+; 宠物技能：纯按下边沿触发；每个监听键按下只发一次。
 
-PetSkillRegisterHotkeys() {
-    return
-}
+class ExPetSkill {
+    static _ctx := 0
 
-PetSkillUnregisterHotkeys() {
-    return
+    static Run() {
+        presetName := LoadLastPresetTrimmed()
+        if (presetName = "" || !LoadPreset(presetName, "PetSkillState", false)) {
+            return
+        }
+        shotKey := GetKeycode.CanonMainKey(LoadPresetSafe(presetName, "PetSkillShotKey"))
+        if (shotKey = "") {
+            return
+        }
+        triggerKeys := PetSkillUniqueSkillKeysByPressKey(PetSkillLoadKeys(presetName))
+        if (triggerKeys.Length = 0) {
+            return
+        }
+        sendToken := GetKeycode.ToSendToken(shotKey)
+        if (sendToken = "") {
+            return
+        }
+        entries := Map()
+        for keyName in triggerKeys {
+            canon := GetKeycode.CanonMainKey(keyName)
+            scID := GetKeycode.ToRouterId(canon)
+            if (scID = "") {
+                continue
+            }
+            entries[scID] := {
+                scID: scID,
+                isHeld: false,
+                downFn: ObjBindMethod(ExPetSkill, "Down", scID),
+                upFn: ObjBindMethod(ExPetSkill, "Up", scID)
+            }
+        }
+        if (entries.Count = 0) {
+            return
+        }
+        this._ctx := {
+            sendToken: sendToken,
+            triggerEntries: entries
+        }
+        OnExit(ObjBindMethod(ExPetSkill, "OnExit"))
+        this._EnableHooks()
+        Suspend(false)
+        loop {
+            Sleep(100)
+        }
+    }
+
+    static _EnableHooks() {
+        for _, entry in this._ctx.triggerEntries {
+            HotIfWinActive("ahk_group DNF")
+            Hotkey("~$" entry.scID, entry.downFn, "On")
+            Hotkey("~$" entry.scID " up", entry.upFn, "On")
+            HotIf()
+        }
+    }
+
+    static _DisableHooks() {
+        ctx := this._ctx
+        if !IsObject(ctx) {
+            return
+        }
+        for _, entry in ctx.triggerEntries {
+            try {
+                HotIfWinActive("ahk_group DNF")
+                try Hotkey("~$" entry.scID, "Off")
+                try Hotkey("~$" entry.scID " up", "Off")
+                HotIf()
+            } catch {
+                try HotIf()
+            }
+        }
+    }
+
+    static Down(scID, *) {
+        ctx := this._ctx
+        entry := ctx.triggerEntries.Get(scID, "")
+        if !IsObject(entry) || entry.isHeld {
+            return
+        }
+        entry.isHeld := true
+        SendIP_Tap(ctx.sendToken)
+    }
+
+    static Up(scID, *) {
+        entry := this._ctx.triggerEntries.Get(scID, "")
+        if IsObject(entry) {
+            entry.isHeld := false
+        }
+    }
+
+    static OnExit(exitReason, exitCode) {
+        this._DisableHooks()
+    }
 }
 
 ExPetSkill_Run() {
-    presetName := LoadLastPresetTrimmed()
-    if (presetName = "" || !LoadPreset(presetName, "PetSkillState", false)) {
-        return
-    }
-    shotKey := GetKeycode.CanonMainKey(LoadPresetSafe(presetName, "PetSkillShotKey"))
-    if (shotKey = "") {
-        return
-    }
-    skillKeys := PetSkillUniqueSkillKeysByPressKey(PetSkillLoadKeys(presetName))
-    if (skillKeys.Length = 0) {
-        return
-    }
-    shotToken := GetKeycode.ToSendToken(shotKey)
-    if (shotToken = "") {
-        return
-    }
-    keyDownState := Map()
-    pressKeys := []
-    for sk in skillKeys {
-        pressKey := GetKeycode.ToProbeKey(GetKeycode.CanonMainKey(sk))
-        if (pressKey = "") {
-            continue
-        }
-        pressKeys.Push(pressKey)
-        keyDownState[pressKey] := false
-    }
-    loop {
-        if WinActive("ahk_group DNF") {
-            for pressKey in pressKeys {
-                isDown := GetKeyState(pressKey, "P")
-                wasDown := keyDownState.Get(pressKey, false)
-                if (isDown && !wasDown) {
-                    SendIP(shotToken)
-                }
-                keyDownState[pressKey] := isDown
-            }
-        } else {
-            for pressKey in pressKeys {
-                keyDownState[pressKey] := false
-            }
-        }
-        Sleep(1)
-    }
+    ExPetSkill.Run()
 }
 
 PetSkillUniqueSkillKeysByPressKey(skillKeys) {

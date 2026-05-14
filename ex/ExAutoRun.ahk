@@ -4,14 +4,6 @@ class ExAutoRun {
     static _sides := Map()
     static _wasActive := false
 
-    static RegisterHotkeys() {
-        return
-    }
-
-    static UnregisterHotkeys() {
-        this._DisableHooks()
-    }
-
     static Run() {
         presetName := LoadLastPresetTrimmed()
         if (presetName = "" || !LoadPreset(presetName, "AutoRunState", false)) {
@@ -37,6 +29,7 @@ class ExAutoRun {
         this._AddSide("R", rCanon)
         this._AddSide("L", lCanon)
         this._wasActive := WinActive("ahk_group DNF") != 0
+        OnExit(ObjBindMethod(ExAutoRun, "OnExit"))
         this._EnableHooks()
         Suspend(false)
         loop {
@@ -54,9 +47,9 @@ class ExAutoRun {
         }
         this._sides[tag] := {
             scID: scID,
+            sendToken: sendToken,
             probeKey: probeKey,
             seq: "{Blind}{" sendToken " Down}{" sendToken " Up}{" sendToken " Down}",
-            upSeq: "{Blind}{" sendToken " Up}",
             heldFromEdge: false,
             timerFn: ObjBindMethod(ExAutoRun, "Pulse", tag),
             downFn: ObjBindMethod(ExAutoRun, "Down", tag),
@@ -107,7 +100,7 @@ class ExAutoRun {
         }
         side.heldFromEdge := false
         SetTimer(side.timerFn, 0)
-        try SendEvent(side.upSeq)
+        SendIP_Release(side.sendToken)
     }
 
     static _WatchFocusLoss() {
@@ -125,7 +118,7 @@ class ExAutoRun {
             }
             side.heldFromEdge := false
             try SetTimer(side.timerFn, 0)
-            try SendEvent(side.upSeq)
+            SendIP_Release(side.sendToken)
         }
     }
 
@@ -143,5 +136,10 @@ class ExAutoRun {
         } finally {
             Critical("Off")
         }
+    }
+
+    static OnExit(exitReason, exitCode) {
+        this._FlushHeldSides()
+        this._DisableHooks()
     }
 }
