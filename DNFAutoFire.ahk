@@ -69,6 +69,9 @@ EnsureMainSingleInstance() {
 #Include ./lib/ui/Controls.ahk
 #Include ./lib/ui/ListBoxDragSort.ahk
 #Include ./lib/ui/KeyCap.ahk
+#Include ./gui/main/MainLayout.ahk
+#Include ./gui/ex/ExLayout.ahk
+#Include ./gui/AutoPresets/AutoPresetsLayout.ahk
 #Include ./gui/main/Main.ahk
 #Include ./gui/AutoPresets/AutoPresets.ahk
 #Include ./gui/main/QuickSwitch.ahk

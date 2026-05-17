@@ -3,12 +3,13 @@
 global gPetSkillGui := Gui("-MinimizeBox -MaximizeBox")
 global gPetSkillCtrls := Map()
 global __PetSkillSkillKeys := []
+global gPetSkillLayout := ExLayout.Window()
 
 UiApplyWindow(gPetSkillGui)
 gPetSkillGui.OnEvent("Escape", PetSkillGuiEscape)
 gPetSkillGui.OnEvent("Close", PetSkillGuiClose)
 
-UiSkillKeyEditor(gPetSkillGui, gPetSkillCtrls, "PetSkill", exText["PetSkillListTitle"], exText["PetSkillShotTitle"], exText["PetSkillAdd"], exText["PetSkillDelete"], exText["PetSkillSet"], PetSkillAddKey, PetSkillDeleteKey, PetSkillSetShotKey, PetSkillSave, PetSkillHelp, exText["CommonSave"], exText["PetSkillPageTitle"])
+UiSkillKeyEditor(gPetSkillGui, gPetSkillCtrls, "PetSkill", exText["PetSkillListTitle"], exText["PetSkillShotTitle"], exText["PetSkillAdd"], exText["PetSkillDelete"], exText["PetSkillSet"], PetSkillAddKey, PetSkillDeleteKey, PetSkillSetShotKey, PetSkillSave, PetSkillHelp, exText["CommonSave"], exText["PetSkillPageTitle"], "", "", 0, gPetSkillLayout, PetSkillSaveToAll, exText["CommonSaveToAll"])
 UiListBoxDragSort_Attach(gPetSkillCtrls["PetSkillKeysListBox"], PetSkillDragGetItems, UiListBoxDragSort_RenderStrings, PetSkillDragCommit)
 
 PetSkillGetCtrl(name) {
@@ -17,12 +18,12 @@ PetSkillGetCtrl(name) {
 }
 
 ShowGuiPetSkill(*) {
-    global gMainGui, gPetSkillGui
+    global gMainGui, gPetSkillGui, gPetSkillLayout
     if IsObject(gMainGui) {
         gPetSkillGui.Opt("+Owner" gMainGui.Hwnd)
     }
     gPetSkillGui.Title := exText["PetSkillTitle"]
-    gPetSkillGui.Show("w320 h320")
+    gPetSkillGui.Show("w" gPetSkillLayout.Width() " h" gPetSkillLayout.Height())
     PetSkillLoadConfig()
     DisableGuiMain()
 }
@@ -69,7 +70,14 @@ PetSkillDeleteKey(*) {
 }
 
 PetSkillSave(*) {
-    PetSkillSaveConfig()
+    PetSkillSaveConfig(GetNowSelectPreset())
+    HideGuiPetSkill()
+}
+
+PetSkillSaveToAll(*) {
+    for presetName in LoadAllPreset() {
+        PetSkillSaveConfig(presetName)
+    }
     HideGuiPetSkill()
 }
 
@@ -106,15 +114,15 @@ PetSkillDragCommit(items, selectedIndex) {
     }
 }
 
-PetSkillSaveConfig() {
+PetSkillSaveConfig(presetName) {
     global __PetSkillSkillKeys
     keysString := ""
     for i, v in __PetSkillSkillKeys {
         keysString .= v "|"
     }
     keysString := SubStr(keysString, 1, StrLen(keysString) - 1)
-    SavePreset(GetNowSelectPreset(), "PetSkillSkillKeys", keysString)
-    SavePreset(GetNowSelectPreset(), "PetSkillShotKey", PetSkillGetCtrl("PetSkillShotKey").Text)
+    SavePreset(presetName, "PetSkillSkillKeys", keysString)
+    SavePreset(presetName, "PetSkillShotKey", PetSkillGetCtrl("PetSkillShotKey").Text)
 }
 
 PetSkillLoadConfig() {

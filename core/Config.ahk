@@ -320,8 +320,8 @@ CreateBlankPreset(presetName) {
     SavePreset(presetName, "XiuLuoWaveKey3", "3")
     SavePreset(presetName, "AutoRunLeftKey", "Left")
     SavePreset(presetName, "AutoRunRightKey", "Right")
-    SavePreset(presetName, "AutoRunDelay", 40)
-    SavePreset(presetName, "AutoFireIntervalMs", 20)
+    SavePreset(presetName, "AutoRunDelay", 30)
+    SavePreset(presetName, "AutoRunPauseKey", "")
     SavePreset(presetName, "AutoFireKeyIntervals", "")
 }
 

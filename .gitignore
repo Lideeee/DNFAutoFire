@@ -2,7 +2,7 @@
 .idea
 .codex
 
-
+/assets/preset-recognition/
 config.ini
 subprocess-error.log
 

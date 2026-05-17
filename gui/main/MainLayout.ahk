@@ -1,15 +1,12 @@
 #Requires AutoHotkey v2.0
 
-#Include ./MainKeyLayoutData.ahk
-
 class MainLayout {
     static StandardMargin() => 16
     static GuiWidth() => MainKeyLayoutData.KeyboardWidth() + 32
     static GuiHeight() => this.BottomY() + 216
-    static GuiHeightRunning() => this.GuiHeight() + 8
     static ButtonColumnX() => this.GuiWidth() - this.StandardMargin() - this.ButtonColumnWidth()
     static ButtonColumnWidth() => 96
-    static ButtonColumnRightPadding() => this.StandardMargin()
+    ; 与参考版一致：键盘区 + 顶部说明一行（主键连发间隔在下方「配置设置」右栏）
     static KeyPanelHeight() => MainKeyLayoutData.KeyboardHeight() + 22
     static BottomY() => 8 + this.KeyPanelHeight() + 12
 
@@ -19,43 +16,49 @@ class MainLayout {
     static ConfigListTop() => this.BottomY() + 34
     static ConfigSectionBottom() => this.GuiHeight() - this.StandardMargin()
     static ConfigListHeight() => this.ConfigSectionBottom() - this.ConfigListTop()
-    static ConfigListBottom() => this.ConfigSectionBottom()
     static ConfigListX() => 16
     static ConfigListWidth() => 150
     static ConfigFieldX() => 174
     static ConfigFieldWidth() => 140
     static ConfigFieldLabelHeight() => 24
     static ConfigFieldEditHeight() => 22
-    static ConfigFieldGroupHeight() => this.ConfigFieldLabelHeight() + this.ConfigFieldEditHeight()
     static ConfigFieldGroupTop(index) {
+        lt := this.ConfigListTop()
         switch index {
             case 1:
-                return this.ConfigListTop()
+                return lt
             case 2:
-                return this.ConfigListTop() + 50
+                return lt + 50
             case 3:
-                return this.ConfigListTop() + 100
+                return lt + 100
             default:
-                return this.ConfigListTop()
+                return lt
         }
     }
     static ConfigFieldLabelY(index) => this.ConfigFieldGroupTop(index)
     static ConfigFieldEditY(index) => this.ConfigFieldGroupTop(index) + this.ConfigFieldLabelHeight()
-    static PresetButtonHeight() => 36
-    static PresetButtonY() => this.ConfigListBottom() - this.PresetButtonHeight()
+
+    static ExRowTop() => this.BottomY() + 34
+    static ExRowHeight() => 36
+    static ExLeftColumnX() => 334
+    static ExRightColumnX() => 488
+    static ExToggleWidth() => 40
+    static ExLeftLinkWidth() => 104
+    static ExRightLinkWidth() => 84
 
     static ActionButtonWidth() => this.ButtonColumnWidth()
     static ActionButtonHeight() => 60
     static ActionButtonYTop() => this.BottomY() + 6
     static ActionButtonYMiddle() => this.BottomY() + 72
     static ActionButtonYBottom() => this.GuiHeight() - this.StandardMargin() - this.ActionButtonHeight()
+}
 
-    static ExTitleX() => 334
-    static ExTitleY() => this.BottomY() + 6
-    static ExTitleWidth() => 200
-    static ExRowTop() => this.BottomY() + 34
-    static ExRowHeight() => 36
-    static ExLeftColumnX() => 334
-    static ExRightColumnX() => 502
-    static ExToggleWidth() => 40
+class SettingLayout {
+    static Window() => UiContentLayout(0, 0)
+    static TabWidth() => 400
+    static TabHeight() => 300
+}
+
+class QuickSwitchLayout {
+    static Window() => UiContentLayout(12, 14)
 }

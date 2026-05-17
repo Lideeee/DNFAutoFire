@@ -268,8 +268,26 @@ class ExActionRuntime {
         }
     }
 
+    static _AutoRunStopActive(ar) {
+        ar.pressingRight := false
+        ar.pressingLeft := false
+        ar.doubleRight := false
+        ar.doubleLeft := false
+        ar.rightCounter := 0
+        ar.leftCounter := 0
+        try SetTimer(ar.rightTickFn, 0)
+        try SetTimer(ar.leftTickFn, 0)
+    }
+
+    static _AutoRunPauseHeld(ar) {
+        return ar.pauseKey != "" && GetKeyState(Key2PressKey(GetOriginKeyName(ar.pauseKey)), "P")
+    }
+
     static AutoRunRightDown(*) {
         ar := this._ctx.autoRun
+        if this._AutoRunPauseHeld(ar) {
+            return
+        }
         if !ar.pressingRight {
             ar.pressingRight := true
             ar.doubleRight := false
@@ -287,6 +305,9 @@ class ExActionRuntime {
 
     static AutoRunRightTick(*) {
         ar := this._ctx.autoRun
+        if this._AutoRunPauseHeld(ar) {
+            return
+        }
         ar.rightCounter++
         if (ar.pressingRight && !ar.doubleRight) {
             SendEvent(ar.rightPulseSend)
@@ -299,6 +320,9 @@ class ExActionRuntime {
 
     static AutoRunLeftDown(*) {
         ar := this._ctx.autoRun
+        if this._AutoRunPauseHeld(ar) {
+            return
+        }
         if !ar.pressingLeft {
             ar.pressingLeft := true
             ar.doubleLeft := false
@@ -316,6 +340,9 @@ class ExActionRuntime {
 
     static AutoRunLeftTick(*) {
         ar := this._ctx.autoRun
+        if this._AutoRunPauseHeld(ar) {
+            return
+        }
         ar.leftCounter++
         if (ar.pressingLeft && !ar.doubleLeft) {
             SendEvent(ar.leftPulseSend)
@@ -347,10 +374,7 @@ class ExActionRuntime {
                 profile.isHeld := false
             }
             if IsObject(ctx.autoRun) {
-                ctx.autoRun.pressingRight := false
-                ctx.autoRun.pressingLeft := false
-                try SetTimer(ctx.autoRun.rightTickFn, 0)
-                try SetTimer(ctx.autoRun.leftTickFn, 0)
+                this._AutoRunStopActive(ctx.autoRun)
             }
         }
         ctx.wasActive := isActive
@@ -370,7 +394,7 @@ ExActionRuntime_Run(presetName := "") {
 
 ExAction_BuildRules(presetName) {
     rules := []
-    intervalMs := LoadAutoFireGlobalIntervalMs(presetName)
+    intervalMs := LoadAutoFireGlobalIntervalMs()
     if LoadPreset(presetName, "LvRenState", false) {
         ExAction_AddRepeatRule(rules, "LvRen", LvRenLoadKeys(presetName), LoadPreset(presetName, "LvRenShotKey", "Z"), intervalMs)
     }
@@ -589,10 +613,15 @@ ExAction_BuildAutoRun(presetName) {
     if (rightKey = "") {
         rightKey := "Right"
     }
-    tickMs := ExAction_Clamp(LoadPreset(presetName, "AutoRunDelay", 40), 1, 400)
+    tickMs := ExAction_Clamp(LoadPreset(presetName, "AutoRunDelay", 30), 1, 400)
+    pauseKey := Trim(LoadPreset(presetName, "AutoRunPauseKey", ""))
+    if (pauseKey = leftKey || pauseKey = rightKey) {
+        pauseKey := ""
+    }
     ar := {
         leftKey: leftKey,
         rightKey: rightKey,
+        pauseKey: pauseKey,
         tickMs: tickMs,
         rightPulseSend: "{" rightKey " Down}{" rightKey " Up}{" rightKey " Down}",
         rightUpSend: "{" rightKey " Up}",

@@ -153,7 +153,7 @@ StartAutoFire(){
     }
     try AutoPresets_OnSessionStarted()
     SetTrayRunningIcon(true)
-    ShowTip("连发已启动 - " . nowSelectPreset)
+    ShowTip("连发已启动")
     return true
 }
 
@@ -258,18 +258,11 @@ SaveMainPresetState(presetName) {
     SavePreset(presetName, "AutoRunState", MainGetCtrl("AutoRun").Value)
     SavePreset(presetName, "ComboState", MainGetCtrl("Combo").Value)
     SaveConfig("AutoPresetsEnabled", MainGetCtrl("AutoPresets").Value ? 1 : 0)
-    afInterval := 20
     try {
-        afInterval := Round(MainGetCtrl("AutoFireIntervalMs").Text + 0)
+        SaveAutoFireGlobalIntervalMs(MainGetCtrl("AutoFireIntervalMs").Text)
     } catch {
-        afInterval := 20
+        SaveAutoFireGlobalIntervalMs(20)
     }
-    if (afInterval < 1) {
-        afInterval := 1
-    } else if (afInterval > 200) {
-        afInterval := 200
-    }
-    SavePreset(presetName, "AutoFireIntervalMs", afInterval)
     SavePreset(presetName, "AutoFireKeyIntervals", AutoFireKeyIntervals_MapToString(_AutoFireKeyIntervals))
     return true
 }
@@ -392,8 +385,8 @@ FindDNFGameWindowTitle() {
     return ""
 }
 
-; 提示后切回游戏：按精确客户端标题依次尝试，避免 WinActivate("ahk_group DNF") 命中组内非客户区 HWND（有声但键像未进游戏）。
-ActivateDNFAfterTip() {
+; 提示前切回游戏：按精确客户端标题依次尝试，避免 WinActivate("ahk_group DNF") 命中组内非客户区 HWND（有声但键像未进游戏）。
+ActivateDNFBeforeTip() {
     t := FindDNFGameWindowTitle()
     if t {
         try WinActivate(t)
@@ -404,12 +397,13 @@ ShowTip(text) {
     try SetTimer(ShowTipDisplay, 0)
     try SetTimer(CloseTip, 0)
     global __ShowTipPendingText := text
-    SetTimer(ShowTipDisplay, -100)
+    SetTimer(ShowTipDisplay, -50)
 }
 
 ShowTipDisplay() {
     global __ShowTipPendingText
     text := __ShowTipPendingText
+    try ActivateDNFBeforeTip()
     marginX := 16
     marginY := 16
     tipH := 24
@@ -432,7 +426,6 @@ ShowTipDisplay() {
         ToolTip(text)
     }
     SetTimer(CloseTip, -1000)
-    try ActivateDNFAfterTip()
 }
 
 ShowTipEstimateWidth(text) {

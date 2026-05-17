@@ -177,7 +177,7 @@ MainBuildActionButtons() {
 
 MainBuildFeaturePanel() {
     global gMainGui, gMainCtrls
-    panelX := MainLayout.ExTitleX() - 44, panelY := MainLayout.BottomY()
+    panelX := MainLayout.ExLeftColumnX(), panelY := MainLayout.BottomY()
     panelW := MainLayout.ButtonColumnX() - panelX - 8
     panelH := MainLayout.GuiHeight() - panelY - 8
     tw := MainLayout.ExToggleWidth()
@@ -196,8 +196,8 @@ MainBuildFeaturePanel() {
         ["ZhanFa", MainText["ZhanFa"], MainZhanFa, MainLayout.ExLeftColumnX(), MainLayout.ExLeftLinkWidth()]
     ]
     rightRows := [
-        ["PetSkill", MainText["PetSkill"], MainPetSkill, MainLayout.ExRightColumnX(), MainLayout.ExRightLinkWidth()],
         ["XiuLuo", MainText["XiuLuo"], MainXiuLuo, MainLayout.ExRightColumnX(), MainLayout.ExRightLinkWidth()],
+        ["PetSkill", MainText["PetSkill"], MainPetSkill, MainLayout.ExRightColumnX(), MainLayout.ExRightLinkWidth()],
         ["AutoRun", MainText["AutoRun"], MainAutoRun, MainLayout.ExRightColumnX(), MainLayout.ExRightLinkWidth()],
         ["Combo", MainText["Combo"], MainCombo, MainLayout.ExRightColumnX(), MainLayout.ExRightLinkWidth()]
     ]
@@ -233,6 +233,7 @@ SwitchToStoppedState(*) {
     StopAutoFire()
     gMainGui.Title := MainText["AppTitle"]
     MainLoadAllPreset()
+    MainLoadAutoFireGlobalInterval()
     LoadMainPresetState(ResolvePresetName(LoadLastPreset()))
     MainLoatQuickChangeHotKey()
 }
@@ -467,6 +468,10 @@ MainSetting(*) {
     ShowGuiSetting()
 }
 
+MainLoadAutoFireGlobalInterval() {
+    MainGetCtrl("AutoFireIntervalMs").Text := String(LoadAutoFireGlobalIntervalMs())
+}
+
 MainLoadEx() {
     AutoFireKeyIntervals_LoadForPreset(GetNowSelectPreset())
     MainGetCtrl("LvRen").Value := LoadPreset(GetNowSelectPreset(), "LvRenState", false)
@@ -478,7 +483,6 @@ MainLoadEx() {
     MainGetCtrl("AutoRun").Value := LoadPreset(GetNowSelectPreset(), "AutoRunState", false)
     MainGetCtrl("Combo").Value := LoadPreset(GetNowSelectPreset(), "ComboState", false)
     MainGetCtrl("AutoPresets").Value := AutoPresets_LoadEnabledGlobal() ? 1 : 0
-    MainGetCtrl("AutoFireIntervalMs").Text := LoadPreset(GetNowSelectPreset(), "AutoFireIntervalMs", "20")
     MainSyncKeyIntervalBars()
     MainExSwitchPaintAll()
 }

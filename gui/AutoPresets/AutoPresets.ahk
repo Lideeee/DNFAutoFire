@@ -3,81 +3,61 @@
 global gAutoPresetsGui := Gui("-MinimizeBox -MaximizeBox")
 global gAutoPresetsCtrls := Map()
 global gAutoPresetsSelectedPreset := ""
-
-; 布局常量（供预览框 Move 使用）
-global __ap_marginX := 16
-global __ap_windowW := 360
-global __ap_contentR := 344
-global __ap_listW := 120
-global __ap_rightX := 224
-global __ap_rightW := 120
-global __ap_pvW := 120
-global __ap_pvH := 120
-global __ap_pvY := 434
-global __ap_calX := 76
-global __ap_calPvW := 120
-global __ap_calPvH := 120
-global __ap_townW := 72
+global gAutoPresetsLayout := AutoPresetsLayout.Window()
 
 UiApplyWindow(gAutoPresetsGui)
 gAutoPresetsGui.OnEvent("Escape", AutoPresetsGuiEscape)
 gAutoPresetsGui.OnEvent("Close", AutoPresetsGuiClose)
 
-marginX := __ap_marginX
-windowW := __ap_windowW
-contentR := __ap_contentR
-listW := __ap_listW
-rightX := __ap_rightX
-rightW := __ap_rightW
-pvW := __ap_pvW
-pvH := __ap_pvH
-pvY := __ap_pvY
-calX := __ap_calX
-calPvW := __ap_calPvW
-calPvH := __ap_calPvH
-townW := __ap_townW
-rowActionY := pvY + pvH + 12
-apEnableY := 44
-apHotkeyY := 78
-middleY := 126
-middleLabelY := middleY
-middlePreviewY := middleY + 30
-pickBtnY := middlePreviewY + calPvH + 14
-calBtnY := pickBtnY + 36
-townBtnY := calBtnY + 32
-lowerY := townBtnY + 52
-listY := lowerY + 24
-listH := 120
-calY := middlePreviewY
-btnRowY := rowActionY
-saveY := listY + listH + 48
-global __ap_calY := calY
-global __ap_calTownX := calX + calPvW + 16
+marginX := AutoPresetsLayout.MarginX()
+windowW := AutoPresetsLayout.WindowWidth()
+contentR := AutoPresetsLayout.ContentRight()
+listW := AutoPresetsLayout.ListWidth()
+rightX := AutoPresetsLayout.RightX()
+rightW := AutoPresetsLayout.RightWidth()
+pvW := AutoPresetsLayout.PreviewWidth()
+pvH := AutoPresetsLayout.PreviewHeight()
+pvY := AutoPresetsLayout.PreviewY()
+calX := AutoPresetsLayout.CalX()
+calPvW := AutoPresetsLayout.CalPreviewWidth()
+calPvH := AutoPresetsLayout.CalPreviewHeight()
+townW := AutoPresetsLayout.TownWidth()
+rowActionY := AutoPresetsLayout.RowActionY()
+apEnableY := AutoPresetsLayout.EnableY()
+apHotkeyY := AutoPresetsLayout.HotkeyY()
+middleLabelY := AutoPresetsLayout.MiddleLabelY()
+calY := AutoPresetsLayout.CalY()
+pickBtnY := AutoPresetsLayout.PickBtnY()
+calBtnY := AutoPresetsLayout.CalBtnY()
+townBtnY := AutoPresetsLayout.TownBtnY()
+lowerY := AutoPresetsLayout.LowerY()
+listY := AutoPresetsLayout.ListY()
+listH := AutoPresetsLayout.ListHeight()
+saveY := AutoPresetsLayout.SaveY()
 
-UiSection(gAutoPresetsGui, UiRect(marginX, 12, contentR - marginX - 32, 20), AutoPresetsText["SectionTitle"])
-UiHelpButton(gAutoPresetsGui, UiRect(contentR - 22, 12, 22, 22), AutoPresetsHelp)
+UiSectionWithHelp(gAutoPresetsGui, gAutoPresetsLayout, marginX, 12, AutoPresetsText["SectionTitle"], AutoPresetsHelp, contentR)
 gAutoPresetsGui.SetFont()
-gAutoPresetsCtrls["AutoPresetsEnableVisible"] := gAutoPresetsGui.Add("CheckBox", "vAutoPresetsEnableVisible x" marginX " y" apEnableY " w310 h20", AutoPresetsText["Enable"])
+gAutoPresetsCtrls["AutoPresetsEnableVisible"] := gAutoPresetsGui.Add("CheckBox", UiLayoutRect(gAutoPresetsLayout, marginX, apEnableY, 310, 20, "vAutoPresetsEnableVisible"), AutoPresetsText["Enable"])
 gAutoPresetsCtrls["AutoPresetsEnableVisible"].OnEvent("Click", AutoPresetsSyncEnableFromUi)
-UiLabel(gAutoPresetsGui, UiRect(marginX, apHotkeyY, 140, 20), AutoPresetsText["ExtraHotkey"])
-UiEdit(gAutoPresetsCtrls, gAutoPresetsGui, "AutoPresetHotkey", UiRect(144, apHotkeyY - 1, 112, 22, "+ReadOnly -WantCtrlA -E0x200"))
-UiPlainButton(gAutoPresetsGui, UiRect(264, apHotkeyY - 2, 72, 24), AutoPresetsText["Capture"], AutoPresetsCaptureHotkey, "secondary")
+UiLabel(gAutoPresetsGui, UiLayoutRect(gAutoPresetsLayout, marginX, apHotkeyY, 140, 20), AutoPresetsText["ExtraHotkey"])
+UiEdit(gAutoPresetsCtrls, gAutoPresetsGui, "AutoPresetHotkey", UiLayoutRect(gAutoPresetsLayout, 144, apHotkeyY - 1, 112, 22, "+ReadOnly -WantCtrlA -E0x200"))
+UiPlainButton(gAutoPresetsGui, UiLayoutRect(gAutoPresetsLayout, 264, apHotkeyY - 2, 72, 24), AutoPresetsText["Capture"], AutoPresetsCaptureHotkey, "secondary")
 
-UiLabel(gAutoPresetsGui, UiRect(marginX, middleLabelY, contentR - marginX, 18), AutoPresetsText["CalTownReference"])
-gAutoPresetsCtrls["CalPreview"] := gAutoPresetsGui.Add("Picture", "x" calX " y" calY " w" calPvW " h" calPvH, "")
-gAutoPresetsCtrls["TownPreview"] := gAutoPresetsGui.Add("Picture", "x" (calX + calPvW + 16) " y" calY " w" townW " h" calPvH, "")
-UiPlainButton(gAutoPresetsGui, UiRect(76, pickBtnY, 192, 30), AutoPresetsText["PickRegion"], AutoPresetsOpenPickMenu, "secondary")
-UiPlainButton(gAutoPresetsGui, UiRect(76, calBtnY, 192, 28), AutoPresetsText["UpdateCalibrate"], AutoPresetsUpdateCalibrateIcon, "secondary")
-UiPlainButton(gAutoPresetsGui, UiRect(76, townBtnY, 192, 28), AutoPresetsText["UpdateTown"], AutoPresetsUpdateTownIcon, "secondary")
+UiLabel(gAutoPresetsGui, UiLayoutRect(gAutoPresetsLayout, marginX, middleLabelY, contentR - marginX, 18), AutoPresetsText["CalTownReference"])
+gAutoPresetsCtrls["CalPreview"] := gAutoPresetsGui.Add("Picture", UiLayoutRect(gAutoPresetsLayout, calX, calY, calPvW, calPvH), "")
+gAutoPresetsCtrls["TownPreview"] := gAutoPresetsGui.Add("Picture", UiLayoutRect(gAutoPresetsLayout, AutoPresetsLayout.CalTownX(), calY, townW, calPvH), "")
+UiPlainButton(gAutoPresetsGui, UiLayoutRect(gAutoPresetsLayout, 76, pickBtnY, 192, 30), AutoPresetsText["PickRegion"], AutoPresetsOpenPickMenu, "secondary")
+UiPlainButton(gAutoPresetsGui, UiLayoutRect(gAutoPresetsLayout, 76, calBtnY, 192, 28), AutoPresetsText["UpdateCalibrate"], AutoPresetsUpdateCalibrateIcon, "secondary")
+UiPlainButton(gAutoPresetsGui, UiLayoutRect(gAutoPresetsLayout, 76, townBtnY, 192, 28), AutoPresetsText["UpdateTown"], AutoPresetsUpdateTownIcon, "secondary")
 
-UiLabel(gAutoPresetsGui, UiRect(marginX, lowerY, listW, 20), AutoPresetsText["PresetList"])
-UiListBox(gAutoPresetsCtrls, gAutoPresetsGui, "AutoPresetPresetList", UiRect(marginX, listY, listW, listH), AutoPresetsOnPresetListChange)
-UiLabel(gAutoPresetsGui, UiRect(rightX, lowerY, rightW, 20), AutoPresetsText["SkillReference"])
-UiEdit(gAutoPresetsCtrls, gAutoPresetsGui, "AutoPresetSelectedName", UiRect(rightX, lowerY + 1, 1, 1, "+ReadOnly Hidden -E0x200"))
-gAutoPresetsCtrls["SkillPreview"] := gAutoPresetsGui.Add("Picture", "x" rightX " y" pvY " w" pvW " h" pvH, "")
-UiPlainButton(gAutoPresetsGui, UiRect(rightX, rowActionY, (pvW - 8) // 2, 28), AutoPresetsText["CaptureReference"], AutoPresetsUpdateSkillIcon, "secondary")
-UiPlainButton(gAutoPresetsGui, UiRect(rightX + (pvW + 8) // 2, rowActionY, (pvW - 8) // 2, 28), AutoPresetsText["DeleteReference"], AutoPresetsDeleteSkillIcon, "secondary")
-UiPlainButton(gAutoPresetsGui, UiRect((windowW - 120) // 2, saveY, 120, 30), AutoPresetsText["Save"], AutoPresetsGuiSave, "primary")
+UiLabel(gAutoPresetsGui, UiLayoutRect(gAutoPresetsLayout, marginX, lowerY, listW, 20), AutoPresetsText["PresetList"])
+UiListBox(gAutoPresetsCtrls, gAutoPresetsGui, "AutoPresetPresetList", UiLayoutRect(gAutoPresetsLayout, marginX, listY, listW, listH), AutoPresetsOnPresetListChange)
+UiLabel(gAutoPresetsGui, UiLayoutRect(gAutoPresetsLayout, rightX, lowerY, rightW, 20), AutoPresetsText["SkillReference"])
+UiEdit(gAutoPresetsCtrls, gAutoPresetsGui, "AutoPresetSelectedName", UiLayoutRect(gAutoPresetsLayout, rightX, lowerY + 1, 1, 1, "+ReadOnly Hidden -E0x200"))
+gAutoPresetsCtrls["SkillPreview"] := gAutoPresetsGui.Add("Picture", UiLayoutRect(gAutoPresetsLayout, rightX, pvY, pvW, pvH), "")
+UiPlainButton(gAutoPresetsGui, UiLayoutRect(gAutoPresetsLayout, rightX, rowActionY, (pvW - 8) // 2, 28), AutoPresetsText["CaptureReference"], AutoPresetsUpdateSkillIcon, "secondary")
+UiPlainButton(gAutoPresetsGui, UiLayoutRect(gAutoPresetsLayout, rightX + (pvW + 8) // 2, rowActionY, (pvW - 8) // 2, 28), AutoPresetsText["DeleteReference"], AutoPresetsDeleteSkillIcon, "secondary")
+UiPlainButton(gAutoPresetsGui, UiExSaveButtonRect(gAutoPresetsLayout, saveY, contentR, 30), AutoPresetsText["Save"], AutoPresetsGuiSave, "primary")
 
 AutoPresetsGetCtrl(name) {
     global gAutoPresetsCtrls
@@ -85,23 +65,20 @@ AutoPresetsGetCtrl(name) {
 }
 
 AutoPresetsLockSkillPreview(pic) {
-    global __ap_rightX, __ap_pvY, __ap_pvW, __ap_pvH
     if IsObject(pic) {
-        pic.Move(__ap_rightX, __ap_pvY, __ap_pvW, __ap_pvH)
+        pic.Move(AutoPresetsLayout.RightX(), AutoPresetsLayout.PreviewY(), AutoPresetsLayout.PreviewWidth(), AutoPresetsLayout.PreviewHeight())
     }
 }
 
 AutoPresetsLockCalPreview(pic) {
-    global __ap_calX, __ap_calY, __ap_calPvW, __ap_calPvH
     if IsObject(pic) {
-        pic.Move(__ap_calX, __ap_calY, __ap_calPvW, __ap_calPvH)
+        pic.Move(AutoPresetsLayout.CalX(), AutoPresetsLayout.CalY(), AutoPresetsLayout.CalPreviewWidth(), AutoPresetsLayout.CalPreviewHeight())
     }
 }
 
 AutoPresetsLockTownPreview(pic) {
-    global __ap_calTownX, __ap_calY, __ap_townW, __ap_calPvH
     if IsObject(pic) {
-        pic.Move(__ap_calTownX, __ap_calY, __ap_townW, __ap_calPvH)
+        pic.Move(AutoPresetsLayout.CalTownX(), AutoPresetsLayout.CalY(), AutoPresetsLayout.TownWidth(), AutoPresetsLayout.CalPreviewHeight())
     }
 }
 
@@ -177,7 +154,6 @@ AutoPresetsRefreshEnableCheckbox() {
 }
 
 AutoPresetsRefreshSkillPreview() {
-    global __ap_pvW, __ap_pvH
     pic := AutoPresetsGetCtrl("SkillPreview")
     if !IsObject(pic) {
         return
@@ -187,7 +163,7 @@ AutoPresetsRefreshSkillPreview() {
     AutoPresetsLockSkillPreview(pic)
     if FileExist(path) {
         tmp := AutoPresetsSkillIcon_FitPreviewTempPath()
-        if AutoPresetsSkillIcon_RenderFitPreviewToFile(path, __ap_pvW, __ap_pvH, tmp) && FileExist(tmp) {
+        if AutoPresetsSkillIcon_RenderFitPreviewToFile(path, AutoPresetsLayout.PreviewWidth(), AutoPresetsLayout.PreviewHeight(), tmp) && FileExist(tmp) {
             pic.Value := tmp
         } else {
             pic.Value := path
@@ -205,7 +181,7 @@ AutoPresetsRefreshCalTownPreviews() {
         p := AutoPresetsCalibrateIconGlobalPath()
         if FileExist(p) {
             tmp := A_Temp "\DAF_cal_fit_preview.png"
-            if AutoPresetsSkillIcon_RenderFitPreviewToFile(p, __ap_calPvW, __ap_calPvH, tmp) && FileExist(tmp) {
+            if AutoPresetsSkillIcon_RenderFitPreviewToFile(p, AutoPresetsLayout.CalPreviewWidth(), AutoPresetsLayout.CalPreviewHeight(), tmp) && FileExist(tmp) {
                 picC.Value := tmp
             } else {
                 picC.Value := p
@@ -219,7 +195,7 @@ AutoPresetsRefreshCalTownPreviews() {
         p2 := AutoPresetsTownIconGlobalPath()
         if FileExist(p2) {
             tmp2 := A_Temp "\DAF_town_fit_preview.png"
-            if AutoPresetsSkillIcon_RenderFitPreviewToFile(p2, __ap_townW, __ap_calPvH, tmp2) && FileExist(tmp2) {
+            if AutoPresetsSkillIcon_RenderFitPreviewToFile(p2, AutoPresetsLayout.TownWidth(), AutoPresetsLayout.CalPreviewHeight(), tmp2) && FileExist(tmp2) {
                 picT.Value := tmp2
             } else {
                 picT.Value := p2
@@ -266,14 +242,13 @@ AutoPresetsSyncEnableFromUi(*) {
 }
 
 ShowGuiAutoPresets(*) {
-    global gMainGui, gAutoPresetsGui
+    global gMainGui, gAutoPresetsGui, gAutoPresetsLayout
     if IsObject(gMainGui) {
         gAutoPresetsGui.Opt("+Owner" gMainGui.Hwnd)
     }
     gAutoPresetsGui.Title := AutoPresetsText["SectionTitle"]
     AutoPresetsLoadToGui()
-    hGui := saveY + 30 + 24
-    gAutoPresetsGui.Show("w" windowW " h" hGui)
+    gAutoPresetsGui.Show("w" gAutoPresetsLayout.Width(windowW) " h" gAutoPresetsLayout.Height())
     DisableGuiMain()
 }
 

@@ -3,12 +3,13 @@
 global gLvRenGui := Gui("-MinimizeBox -MaximizeBox")
 global gLvRenCtrls := Map()
 global __LvRenSkillKeys := []
+global gLvRenLayout := ExLayout.Window()
 
 UiApplyWindow(gLvRenGui)
 gLvRenGui.OnEvent("Escape", LvRenGuiEscape)
 gLvRenGui.OnEvent("Close", LvRenGuiClose)
 
-UiSkillKeyEditor(gLvRenGui, gLvRenCtrls, "LvRen", exText["LvRenListTitle"], exText["LvRenShotTitle"], exText["LvRenAdd"], exText["LvRenDelete"], exText["SetShotKey"], LvRenAddKey, LvRenDeleteKey, LvRenSetShotKey, LvRenSave, LvRenHelp, exText["CommonSave"], exText["LvRenPageTitle"])
+UiSkillKeyEditor(gLvRenGui, gLvRenCtrls, "LvRen", exText["LvRenListTitle"], exText["LvRenShotTitle"], exText["LvRenAdd"], exText["LvRenDelete"], exText["SetShotKey"], LvRenAddKey, LvRenDeleteKey, LvRenSetShotKey, LvRenSave, LvRenHelp, exText["CommonSave"], exText["LvRenPageTitle"], "", "", 0, gLvRenLayout)
 UiListBoxDragSort_Attach(gLvRenCtrls["LvRenKeysListBox"], LvRenDragGetItems, UiListBoxDragSort_RenderStrings, LvRenDragCommit)
 
 LvRenGetCtrl(name) {
@@ -17,12 +18,12 @@ LvRenGetCtrl(name) {
 }
 
 ShowGuiLvRen(*) {
-    global gMainGui, gLvRenGui
+    global gMainGui, gLvRenGui, gLvRenLayout
     if IsObject(gMainGui) {
         gLvRenGui.Opt("+Owner" gMainGui.Hwnd)
     }
     gLvRenGui.Title := exText["LvRenTitle"]
-    gLvRenGui.Show("w320 h320")
+    gLvRenGui.Show("w" gLvRenLayout.Width() " h" gLvRenLayout.Height())
     LvRenLoadConfig()
     DisableGuiMain()
 }

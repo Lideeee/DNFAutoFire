@@ -3,12 +3,13 @@
 global gGuanYuGui := Gui("-MinimizeBox -MaximizeBox")
 global gGuanYuCtrls := Map()
 global __GuanYuSkillKeys := []
+global gGuanYuLayout := ExLayout.Window()
 
 UiApplyWindow(gGuanYuGui)
 gGuanYuGui.OnEvent("Escape", GuanYuGuiEscape)
 gGuanYuGui.OnEvent("Close", GuanYuGuiClose)
 
-UiSkillKeyEditor(gGuanYuGui, gGuanYuCtrls, "GuanYu", exText["GuanYuListTitle"], exText["GuanYuShotTitle"], exText["GuanYuAdd"], exText["GuanYuDelete"], exText["SetShotKey"], GuanYuAddKey, GuanYuDeleteKey, GuanYuSetShotKey, GuanYuSave, GuanYuHelp, exText["CommonSave"], exText["GuanYuPageTitle"], exText["GuanYuDelayTitle"])
+UiSkillKeyEditor(gGuanYuGui, gGuanYuCtrls, "GuanYu", exText["GuanYuListTitle"], exText["GuanYuShotTitle"], exText["GuanYuAdd"], exText["GuanYuDelete"], exText["SetShotKey"], GuanYuAddKey, GuanYuDeleteKey, GuanYuSetShotKey, GuanYuSave, GuanYuHelp, exText["CommonSave"], exText["GuanYuPageTitle"], exText["GuanYuDelayTitle"], "", 0, gGuanYuLayout)
 UiListBoxDragSort_Attach(gGuanYuCtrls["GuanYuKeysListBox"], GuanYuDragGetItems, UiListBoxDragSort_RenderStrings, GuanYuDragCommit)
 
 GuanYuGetCtrl(name) {
@@ -17,12 +18,12 @@ GuanYuGetCtrl(name) {
 }
 
 ShowGuiGuanYu(*) {
-    global gMainGui, gGuanYuGui
+    global gMainGui, gGuanYuGui, gGuanYuLayout
     if IsObject(gMainGui) {
         gGuanYuGui.Opt("+Owner" gMainGui.Hwnd)
     }
     gGuanYuGui.Title := exText["GuanYuTitle"]
-    gGuanYuGui.Show("w320 h320")
+    gGuanYuGui.Show("w" gGuanYuLayout.Width() " h" gGuanYuLayout.Height())
     GuanYuLoadConfig()
     DisableGuiMain()
 }

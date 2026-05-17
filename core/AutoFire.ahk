@@ -1,12 +1,25 @@
-; 读取预设的全局主键连发间隔（毫秒），与主界面「主键连发间隔」一致；供扩展子进程复用
-LoadAutoFireGlobalIntervalMs(presetName) {
-    intervalMs := Round(LoadPreset(presetName, "AutoFireIntervalMs", 20) + 0)
-    if (intervalMs < 1) {
-        intervalMs := 1
-    } else if (intervalMs > 200) {
-        intervalMs := 200
+; 全局主键连发间隔（毫秒），保存在 config.ini [设置]；供主界面与子进程复用
+LoadAutoFireGlobalIntervalMs() {
+    AutoFireGlobalInterval_EnsureMigrated()
+    return ClampAutoFireIntervalMs(Round(LoadConfig("AutoFireIntervalMs", 20) + 0))
+}
+
+SaveAutoFireGlobalIntervalMs(intervalMs) {
+    SaveConfig("AutoFireIntervalMs", ClampAutoFireIntervalMs(intervalMs))
+}
+
+AutoFireGlobalInterval_EnsureMigrated() {
+    static done := false
+    if (done) {
+        return
     }
-    return intervalMs
+    done := true
+    raw := IniRead(ConfigIniPath(), "设置", "AutoFireIntervalMs", "__MISSING__")
+    if (raw != "__MISSING__") {
+        return
+    }
+    presetName := ResolvePresetName(LoadLastPreset())
+    SaveAutoFireGlobalIntervalMs(LoadPreset(presetName, "AutoFireIntervalMs", 20))
 }
 
 ClampAutoFireIntervalMs(intervalMs) {
@@ -55,7 +68,7 @@ MainAutoFire(presetName := "") {
 
     presetName := ResolvePresetName(presetName = "" ? LoadLastPreset() : presetName)
     keys := AutoFire_LoadRuntimeKeys(presetName)
-    defaultMs := LoadAutoFireGlobalIntervalMs(presetName)
+    defaultMs := LoadAutoFireGlobalIntervalMs()
     perMap := AutoFireKeyIntervals_StringToMap(LoadPreset(presetName, "AutoFireKeyIntervals", ""))
     timers := []
 

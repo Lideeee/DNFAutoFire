@@ -3,12 +3,13 @@
 global gZhanFaGui := Gui("-MinimizeBox -MaximizeBox")
 global gZhanFaCtrls := Map()
 global __ZhanFaSkillKeys := []
+global gZhanFaLayout := ExLayout.Window()
 
 UiApplyWindow(gZhanFaGui)
 gZhanFaGui.OnEvent("Escape", ZhanFaGuiEscape)
 gZhanFaGui.OnEvent("Close", ZhanFaGuiClose)
 
-UiSkillKeyEditor(gZhanFaGui, gZhanFaCtrls, "ZhanFa", exText["ZhanFaListTitle"], exText["ZhanFaShotTitle"], exText["ZhanFaAdd"], exText["ZhanFaDelete"], exText["SetShotKey"], ZhanFaAddKey, ZhanFaDeleteKey, ZhanFaSetShotKey, ZhanFaSave, ZhanFaHelp, exText["CommonSave"], exText["ZhanFaPageTitle"], "", exText["ZhanFaBigShotTitle"], ZhanFaSetShotKey2)
+UiSkillKeyEditor(gZhanFaGui, gZhanFaCtrls, "ZhanFa", exText["ZhanFaListTitle"], exText["ZhanFaShotTitle"], exText["ZhanFaAdd"], exText["ZhanFaDelete"], exText["SetShotKey"], ZhanFaAddKey, ZhanFaDeleteKey, ZhanFaSetShotKey, ZhanFaSave, ZhanFaHelp, exText["CommonSave"], exText["ZhanFaPageTitle"], "", exText["ZhanFaBigShotTitle"], ZhanFaSetShotKey2, gZhanFaLayout)
 UiListBoxDragSort_Attach(gZhanFaCtrls["ZhanFaKeysListBox"], ZhanFaDragGetItems, UiListBoxDragSort_RenderStrings, ZhanFaDragCommit)
 
 ZhanFaGetCtrl(name) {
@@ -17,12 +18,12 @@ ZhanFaGetCtrl(name) {
 }
 
 ShowGuiZhanFa(*) {
-    global gMainGui, gZhanFaGui
+    global gMainGui, gZhanFaGui, gZhanFaLayout
     if IsObject(gMainGui) {
         gZhanFaGui.Opt("+Owner" gMainGui.Hwnd)
     }
     gZhanFaGui.Title := exText["ZhanFaTitle"]
-    gZhanFaGui.Show("w320 h352")
+    gZhanFaGui.Show("w" gZhanFaLayout.Width() " h" gZhanFaLayout.Height())
     ZhanFaLoadConfig()
     DisableGuiMain()
 }

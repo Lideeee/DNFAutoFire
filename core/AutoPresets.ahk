@@ -1,16 +1,15 @@
 #Requires AutoHotkey v2.0
 
-; 自动识别配置：搜图匹配技能栏/血条/城镇参考图后切换预设（参考 DNFAutoFire PresetRecognition）
+; 自动识别配置：搜图匹配技能栏/血条/城镇参考图后切换预设
 
 class AutoPresets {
-    static RetryIntervalMs := 400
-    static MaxRetryAttempts := 200
+    static RetryIntervalMs := 250
+    static MaxRetryAttempts := 240
     static SkillImageVariation := 80
     static CalibrateImageVariation := 80
     static TownImageVariation := 20
     static _retryTimer := false
-    static _startDelayTimer := false
-    static _mainStartTimer := false
+    static _startTimer := false
     static _registeredEsc := false
     static _registeredCustom := false
     static _lastCustomHotkey := ""
@@ -449,24 +448,16 @@ AutoPresets_ClearRetryTimer() {
     }
 }
 
-AutoPresets_ClearStartDelayTimer() {
-    if AutoPresets._startDelayTimer {
-        try SetTimer(AutoPresets._startDelayTimer, 0)
-        AutoPresets._startDelayTimer := false
-    }
-}
-
-AutoPresets_ClearMainStartTimer() {
-    if AutoPresets._mainStartTimer {
-        try SetTimer(AutoPresets._mainStartTimer, 0)
-        AutoPresets._mainStartTimer := false
+AutoPresets_ClearStartTimer() {
+    if AutoPresets._startTimer {
+        try SetTimer(AutoPresets._startTimer, 0)
+        AutoPresets._startTimer := false
     }
 }
 
 AutoPresets_CancelPending() {
     AutoPresets_ClearRetryTimer()
-    AutoPresets_ClearStartDelayTimer()
-    AutoPresets_ClearMainStartTimer()
+    AutoPresets_ClearStartTimer()
 }
 
 AutoPresets_CurrentSessionId() {
@@ -483,40 +474,25 @@ AutoPresets_IsCurrentSequence(sessionId, sequenceId) {
 }
 
 AutoPresets_Trigger(*) {
-    AutoPresets_StartSequence()
+    AutoPresets_Request(true)
 }
 
-AutoPresets_StartSequence() {
+AutoPresets_Request(requireActive := false) {
     if !AutoPresets_IsFeatureEnabledForRunningPreset() {
         return
     }
     if !AutoPresets_IsSessionRunning() {
         return
     }
-    if !AutoPresets_GameActive() {
+    if (requireActive && !AutoPresets_GameActive()) {
         return
     }
     AutoPresets_CancelPending()
     sessionId := AutoPresets_CurrentSessionId()
     sequenceId := AutoPresets_StartNewSequence()
-    fn := AutoPresets_AfterStartDelay.Bind(sessionId, sequenceId)
-    AutoPresets._startDelayTimer := fn
-    SetTimer(fn, -1000)
-}
-
-AutoPresets_StartSequenceFromMainStart() {
-    if !AutoPresets_IsFeatureEnabledForRunningPreset() {
-        return
-    }
-    if !AutoPresets_IsSessionRunning() {
-        return
-    }
-    AutoPresets_CancelPending()
-    sessionId := AutoPresets_CurrentSessionId()
-    sequenceId := AutoPresets_StartNewSequence()
-    fn := AutoPresets_AfterMainStartDelay.Bind(sessionId, sequenceId, 1)
-    AutoPresets._mainStartTimer := fn
-    SetTimer(fn, -500)
+    fn := AutoPresets_Begin.Bind(sessionId, sequenceId, 1)
+    AutoPresets._startTimer := fn
+    SetTimer(fn, -AutoPresets.RetryIntervalMs)
 }
 
 AutoPresets_IsFeatureEnabledForRunningPreset() {
@@ -533,11 +509,11 @@ AutoPresets_HotIfShouldFire(*) {
     return WinActive("ahk_group DNF") != 0
 }
 
-AutoPresets_AfterMainStartDelay(sessionId, sequenceId, attemptIdx, *) {
+AutoPresets_Begin(sessionId, sequenceId, attemptIdx, *) {
     if !AutoPresets_IsCurrentSequence(sessionId, sequenceId) {
         return
     }
-    AutoPresets._mainStartTimer := false
+    AutoPresets._startTimer := false
     if !AutoPresets_IsFeatureEnabledForRunningPreset() {
         return
     }
@@ -545,32 +521,15 @@ AutoPresets_AfterMainStartDelay(sessionId, sequenceId, attemptIdx, *) {
         return
     }
     if AutoPresets_GameActive() {
-        AutoPresets_RunAttempt(sessionId, sequenceId, 1)
+        AutoPresets_RunAttempt(sessionId, sequenceId, attemptIdx)
         return
     }
     if (attemptIdx >= AutoPresets.MaxRetryAttempts) {
         return
     }
-    fn := AutoPresets_AfterMainStartDelay.Bind(sessionId, sequenceId, attemptIdx + 1)
-    AutoPresets._mainStartTimer := fn
+    fn := AutoPresets_Begin.Bind(sessionId, sequenceId, attemptIdx + 1)
+    AutoPresets._startTimer := fn
     SetTimer(fn, -AutoPresets.RetryIntervalMs)
-}
-
-AutoPresets_AfterStartDelay(sessionId, sequenceId, *) {
-    if !AutoPresets_IsCurrentSequence(sessionId, sequenceId) {
-        return
-    }
-    AutoPresets._startDelayTimer := false
-    if !AutoPresets_IsFeatureEnabledForRunningPreset() {
-        return
-    }
-    if !AutoPresets_IsSessionRunning() {
-        return
-    }
-    if !AutoPresets_GameActive() {
-        return
-    }
-    AutoPresets_RunAttempt(sessionId, sequenceId, 1)
 }
 
 AutoPresets_RunAttempt(sessionId, sequenceId, attemptIdx) {
@@ -586,7 +545,13 @@ AutoPresets_RunAttempt(sessionId, sequenceId, attemptIdx) {
         return
     }
     if !AutoPresets_GameActive() {
-        AutoPresets_ClearRetryTimer()
+        if (attemptIdx >= AutoPresets.MaxRetryAttempts) {
+            AutoPresets_ClearRetryTimer()
+            return
+        }
+        fn := AutoPresets_RunAttempt.Bind(sessionId, sequenceId, attemptIdx + 1)
+        AutoPresets._retryTimer := fn
+        SetTimer(fn, -AutoPresets.RetryIntervalMs)
         return
     }
     if !AutoPresets_HasAnyCalibratePng() || !AutoPresetsCalibrateIconMatches() {
@@ -690,7 +655,7 @@ AutoPresets_OnSessionStarted() {
     if !AutoPresets_LoadEnabledGlobal() {
         return
     }
-    AutoPresets_StartSequenceFromMainStart()
+    AutoPresets_Request()
 }
 
 AutoPresets_OnSessionStopped() {

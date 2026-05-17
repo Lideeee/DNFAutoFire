@@ -41,8 +41,38 @@ UiLabel(gui, options, text) {
 }
 
 ; EX 设置窗口内页标题（与窗口标题栏区分，显示在内容区顶部）
-UiExPageTitle(gui, title, contentWidth) {
-    return UiLabel(gui, UiRect(16, 16, contentWidth - 46, 22, "+0x200"), title)
+UiExPageTitle(gui, title, contentRight, layout := "", helpFn := "") {
+    titleX := ExLayout.MarginLeft()
+    titleY := ExLayout.TitleY()
+    titleW := ExLayout.TitleTextWidth(contentRight)
+    titleCtrl := UiLabel(gui, UiLayoutRect(layout, titleX, titleY, titleW, ExLayout.TitleHeight(), "+0x200"), title)
+    if (helpFn != "") {
+        UiHelpButton(gui, UiExHelpButtonRect(layout, contentRight, ExLayout.HelpButtonY()), helpFn)
+    }
+    return titleCtrl
+}
+
+UiSectionWithHelp(gui, layout, x, y, title, helpFn, contentRight := "") {
+    UiSection(gui, UiLayoutRect(layout, x, y, 120, 20), title)
+    if (contentRight != "" && helpFn != "") {
+        UiHelpButton(gui, UiExHelpButtonRect(layout, contentRight, y), helpFn)
+    }
+}
+
+UiExSaveButtonRect(layout, y, contentRight, h := 32) {
+    x := ExLayout.MarginLeft()
+    return UiLayoutRect(layout, x, y, contentRight - x, h)
+}
+
+UiExHelpButtonRect(layout, contentRight, y, sz := 22) {
+    return UiLayoutRect(layout, contentRight - sz, y, sz, sz)
+}
+
+UiExSplitButtonRects(layout, x, y, totalW, gap := 8, h := 28) {
+    leftW := Floor((totalW - gap) / 2)
+    rightX := x + leftW + gap
+    rightW := totalW - leftW - gap
+    return [UiLayoutRect(layout, x, y, leftW, h), UiLayoutRect(layout, rightX, y, rightW, h)]
 }
 
 UiMutedLabel(gui, options, text) {
@@ -132,8 +162,8 @@ UiHotkey(ctrls, gui, name, options, onChange := "") {
     return ctrl
 }
 
-UiSkillKeyEditor(gui, ctrls, prefix, listTitle, shotTitle, addText, deleteText, setText, addFn, deleteFn, setFn, saveFn, helpFn, saveText, pageTitle := "", delayTitle := "", shotTitle2 := "", setFn2 := 0) {
-    skColX := 16
+UiSkillKeyEditor(gui, ctrls, prefix, listTitle, shotTitle, addText, deleteText, setText, addFn, deleteFn, setFn, saveFn, helpFn, saveText, pageTitle := "", delayTitle := "", shotTitle2 := "", setFn2 := 0, layout := "", saveAllFn := "", saveAllText := "") {
+    skColX := ExLayout.MarginLeft()
     skColW := 136
     skGap := 16
     skRightX := skColX + skColW + skGap
@@ -155,27 +185,26 @@ UiSkillKeyEditor(gui, ctrls, prefix, listTitle, shotTitle, addText, deleteText, 
     skBtnY := skListY + skListH + 6
     nextRowY := 136
     skSaveY := 286 + extraRows * 28
-    skWinW := skTriggerEX + skTriggerEW + 16
+    skContentRight := skTriggerEX + skTriggerEW
     setBtnW := skTriggerEX - skRightX + skTriggerEW
 
     if (pageTitle != "") {
-        UiExPageTitle(gui, pageTitle, skWinW)
+        UiExPageTitle(gui, pageTitle, skContentRight, layout, helpFn)
     }
-    UiHelpButton(gui, UiRect(skWinW - 30, 12, 22, 22), helpFn)
-    UiLabel(gui, UiRect(skColX, 52, skColW, 20), listTitle)
-    UiListBox(ctrls, gui, prefix "KeysListBox", UiRect(skColX, skListY, skColW, skListH))
+    UiLabel(gui, UiLayoutRect(layout, skColX, 52, skColW, 20), listTitle)
+    UiListBox(ctrls, gui, prefix "KeysListBox", UiLayoutRect(layout, skColX, skListY, skColW, skListH))
 
-    UiPlainButton(gui, UiRect(skColX, skBtnY, skBtnW, 24), addText, addFn)
-    UiPlainButton(gui, UiRect(skColX + skBtnW + skBtnGap, skBtnY, skBtnW, 24), deleteText, deleteFn)
+    UiPlainButton(gui, UiLayoutRect(layout, skColX, skBtnY, skBtnW, 24), addText, addFn)
+    UiPlainButton(gui, UiLayoutRect(layout, skColX + skBtnW + skBtnGap, skBtnY, skBtnW, 24), deleteText, deleteFn)
 
-    UiLabel(gui, UiRect(skRightX, 78, skTriggerLW, 24), shotTitle)
-    UiEdit(ctrls, gui, prefix "ShotKey", UiRect(skTriggerEX, 78, skTriggerEW, 24, "+ReadOnly -WantCtrlA -E0x200 Border"))
-    UiPlainButton(gui, UiRect(skRightX, 106, setBtnW, 24), setText, setFn)
+    UiLabel(gui, UiLayoutRect(layout, skRightX, 78, skTriggerLW, 24), shotTitle)
+    UiEdit(ctrls, gui, prefix "ShotKey", UiLayoutRect(layout, skTriggerEX, 78, skTriggerEW, 24, "+ReadOnly -WantCtrlA -E0x200 Border"))
+    UiPlainButton(gui, UiLayoutRect(layout, skRightX, 106, setBtnW, 24), setText, setFn)
 
     if hasSecondShot {
-        UiLabel(gui, UiRect(skRightX, nextRowY, skTriggerLW, 24), shotTitle2)
-        UiEdit(ctrls, gui, prefix "ShotKey2", UiRect(skTriggerEX, nextRowY, skTriggerEW, 24, "+ReadOnly -WantCtrlA -E0x200 Border"))
-        UiPlainButton(gui, UiRect(skRightX, nextRowY + 28, setBtnW, 24), setText, setFn2)
+        UiLabel(gui, UiLayoutRect(layout, skRightX, nextRowY, skTriggerLW, 24), shotTitle2)
+        UiEdit(ctrls, gui, prefix "ShotKey2", UiLayoutRect(layout, skTriggerEX, nextRowY, skTriggerEW, 24, "+ReadOnly -WantCtrlA -E0x200 Border"))
+        UiPlainButton(gui, UiLayoutRect(layout, skRightX, nextRowY + 28, setBtnW, 24), setText, setFn2)
         nextRowY += 58
     }
 
@@ -183,8 +212,15 @@ UiSkillKeyEditor(gui, ctrls, prefix, listTitle, shotTitle, addText, deleteText, 
         delayLW := 78
         delayEX := skRightX + delayLW + 6
         delayEW := skColW - delayLW - 6
-        UiLabel(gui, UiRect(skRightX, nextRowY, delayLW, 24), delayTitle)
-        UiEdit(ctrls, gui, prefix "Delay", UiRect(delayEX, nextRowY, delayEW, 24, "+Number -E0x200 Border"))
+        UiLabel(gui, UiLayoutRect(layout, skRightX, nextRowY, delayLW, 24), delayTitle)
+        UiEdit(ctrls, gui, prefix "Delay", UiLayoutRect(layout, delayEX, nextRowY, delayEW, 24, "+Number -E0x200 Border"))
     }
-    UiPlainButton(gui, UiRect(16, skSaveY, skWinW - 32, 28), saveText, saveFn, "primary")
+    saveBarW := skContentRight - ExLayout.MarginLeft()
+    if (saveAllFn != "") {
+        saveBtnRects := UiExSplitButtonRects(layout, ExLayout.MarginLeft(), skSaveY, saveBarW, 8, 28)
+        UiPlainButton(gui, saveBtnRects[1], saveAllText, saveAllFn, "secondary")
+        UiPlainButton(gui, saveBtnRects[2], saveText, saveFn, "primary")
+    } else {
+        UiPlainButton(gui, UiExSaveButtonRect(layout, skSaveY, skContentRight, 28), saveText, saveFn, "primary")
+    }
 }

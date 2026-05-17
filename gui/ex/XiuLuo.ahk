@@ -2,34 +2,38 @@
 
 global gXiuLuoGui := Gui("-MinimizeBox -MaximizeBox")
 global gXiuLuoCtrls := Map()
+global gXiuLuoLayout := ExLayout.Window()
 
 UiApplyWindow(gXiuLuoGui)
 gXiuLuoGui.OnEvent("Escape", XiuLuoGuiEscape)
 gXiuLuoGui.OnEvent("Close", XiuLuoGuiClose)
 
-UiExPageTitle(gXiuLuoGui, exText["XiuLuoPageTitle"], 258)
-UiLabel(gXiuLuoGui, UiRect(16, 54, 76, 24), exText["XiuLuoTriggerKey"])
-UiEdit(gXiuLuoCtrls, gXiuLuoGui, "XiuLuoTriggerKey", UiRect(98, 54, 140, 24, "+ReadOnly -WantCtrlA -E0x200 Border"))
-UiPlainButton(gXiuLuoGui, UiRect(98, 82, 140, 24), exText["SetKey"], XiuLuoSetTriggerKey)
+contentRight := 238
+fieldX := 98
+fieldW := contentRight - fieldX
 
-UiLabel(gXiuLuoGui, UiRect(16, 118, 76, 24), exText["XiuLuoXKey"])
-UiEdit(gXiuLuoCtrls, gXiuLuoGui, "XiuLuoXKey", UiRect(98, 118, 140, 24, "+ReadOnly -WantCtrlA -E0x200 Border"))
-UiPlainButton(gXiuLuoGui, UiRect(98, 146, 140, 24), exText["SetKey"], XiuLuoSetXKey)
+UiExPageTitle(gXiuLuoGui, exText["XiuLuoPageTitle"], contentRight, gXiuLuoLayout, XiuLuoHelp)
+UiLabel(gXiuLuoGui, UiLayoutRect(gXiuLuoLayout, ExLayout.MarginLeft(), 54, 76, 24), exText["XiuLuoTriggerKey"])
+UiEdit(gXiuLuoCtrls, gXiuLuoGui, "XiuLuoTriggerKey", UiLayoutRect(gXiuLuoLayout, fieldX, 54, fieldW, 24, "+ReadOnly -WantCtrlA -E0x200 Border"))
+UiPlainButton(gXiuLuoGui, UiLayoutRect(gXiuLuoLayout, fieldX, 82, fieldW, 24), exText["SetKey"], XiuLuoSetTriggerKey)
 
-UiLabel(gXiuLuoGui, UiRect(16, 182, 76, 24), exText["XiuLuoWaveKey1"])
-UiEdit(gXiuLuoCtrls, gXiuLuoGui, "XiuLuoWaveKey1", UiRect(98, 182, 140, 24, "+ReadOnly -WantCtrlA -E0x200 Border"))
-UiPlainButton(gXiuLuoGui, UiRect(98, 210, 140, 24), exText["SetKey"], XiuLuoSetWaveKey1)
+UiLabel(gXiuLuoGui, UiLayoutRect(gXiuLuoLayout, ExLayout.MarginLeft(), 118, 76, 24), exText["XiuLuoXKey"])
+UiEdit(gXiuLuoCtrls, gXiuLuoGui, "XiuLuoXKey", UiLayoutRect(gXiuLuoLayout, fieldX, 118, fieldW, 24, "+ReadOnly -WantCtrlA -E0x200 Border"))
+UiPlainButton(gXiuLuoGui, UiLayoutRect(gXiuLuoLayout, fieldX, 146, fieldW, 24), exText["SetKey"], XiuLuoSetXKey)
 
-UiLabel(gXiuLuoGui, UiRect(16, 246, 76, 24), exText["XiuLuoWaveKey2"])
-UiEdit(gXiuLuoCtrls, gXiuLuoGui, "XiuLuoWaveKey2", UiRect(98, 246, 140, 24, "+ReadOnly -WantCtrlA -E0x200 Border"))
-UiPlainButton(gXiuLuoGui, UiRect(98, 274, 140, 24), exText["SetKey"], XiuLuoSetWaveKey2)
+UiLabel(gXiuLuoGui, UiLayoutRect(gXiuLuoLayout, ExLayout.MarginLeft(), 182, 76, 24), exText["XiuLuoWaveKey1"])
+UiEdit(gXiuLuoCtrls, gXiuLuoGui, "XiuLuoWaveKey1", UiLayoutRect(gXiuLuoLayout, fieldX, 182, fieldW, 24, "+ReadOnly -WantCtrlA -E0x200 Border"))
+UiPlainButton(gXiuLuoGui, UiLayoutRect(gXiuLuoLayout, fieldX, 210, fieldW, 24), exText["SetKey"], XiuLuoSetWaveKey1)
 
-UiLabel(gXiuLuoGui, UiRect(16, 310, 76, 24), exText["XiuLuoWaveKey3"])
-UiEdit(gXiuLuoCtrls, gXiuLuoGui, "XiuLuoWaveKey3", UiRect(98, 310, 140, 24, "+ReadOnly -WantCtrlA -E0x200 Border"))
-UiPlainButton(gXiuLuoGui, UiRect(98, 338, 140, 24), exText["SetKey"], XiuLuoSetWaveKey3)
+UiLabel(gXiuLuoGui, UiLayoutRect(gXiuLuoLayout, ExLayout.MarginLeft(), 246, 76, 24), exText["XiuLuoWaveKey2"])
+UiEdit(gXiuLuoCtrls, gXiuLuoGui, "XiuLuoWaveKey2", UiLayoutRect(gXiuLuoLayout, fieldX, 246, fieldW, 24, "+ReadOnly -WantCtrlA -E0x200 Border"))
+UiPlainButton(gXiuLuoGui, UiLayoutRect(gXiuLuoLayout, fieldX, 274, fieldW, 24), exText["SetKey"], XiuLuoSetWaveKey2)
 
-UiPlainButton(gXiuLuoGui, UiRect(16, 382, 222, 30), exText["CommonSave"], XiuLuoSave, "primary")
-UiHelpButton(gXiuLuoGui, UiRect(236, 16, 22, 22), XiuLuoHelp)
+UiLabel(gXiuLuoGui, UiLayoutRect(gXiuLuoLayout, ExLayout.MarginLeft(), 310, 76, 24), exText["XiuLuoWaveKey3"])
+UiEdit(gXiuLuoCtrls, gXiuLuoGui, "XiuLuoWaveKey3", UiLayoutRect(gXiuLuoLayout, fieldX, 310, fieldW, 24, "+ReadOnly -WantCtrlA -E0x200 Border"))
+UiPlainButton(gXiuLuoGui, UiLayoutRect(gXiuLuoLayout, fieldX, 338, fieldW, 24), exText["SetKey"], XiuLuoSetWaveKey3)
+
+UiPlainButton(gXiuLuoGui, UiExSaveButtonRect(gXiuLuoLayout, 382, contentRight, 30), exText["CommonSave"], XiuLuoSave, "primary")
 
 XiuLuoGetCtrl(name) {
     global gXiuLuoCtrls
@@ -37,12 +41,12 @@ XiuLuoGetCtrl(name) {
 }
 
 ShowGuiXiuLuo(*) {
-    global gMainGui, gXiuLuoGui
+    global gMainGui, gXiuLuoGui, gXiuLuoLayout
     if IsObject(gMainGui) {
         gXiuLuoGui.Opt("+Owner" gMainGui.Hwnd)
     }
     gXiuLuoGui.Title := exText["XiuLuoTitle"]
-    gXiuLuoGui.Show("w270 h430")
+    gXiuLuoGui.Show("w" gXiuLuoLayout.Width() " h" gXiuLuoLayout.Height())
     XiuLuoLoadConfig()
     DisableGuiMain()
 }

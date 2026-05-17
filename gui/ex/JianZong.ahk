@@ -2,19 +2,23 @@
 
 global gJianZongGui := Gui("-MinimizeBox -MaximizeBox")
 global gJianZongCtrls := Map()
+global gJianZongLayout := ExLayout.Window()
 
 UiApplyWindow(gJianZongGui)
 gJianZongGui.OnEvent("Escape", JianZongGuiEscape)
 gJianZongGui.OnEvent("Close", JianZongGuiClose)
 
-UiExPageTitle(gJianZongGui, exText["JianZongPageTitle"], 220)
-UiLabel(gJianZongGui, UiRect(16, 54, 110, 24), exText["JianZongDelay"])
-UiEdit(gJianZongCtrls, gJianZongGui, "JianZongDelay", UiRect(128, 54, 72, 24, "+Number -E0x200 Border"))
-UiLabel(gJianZongGui, UiRect(16, 86, 110, 24), exText["JianZongSkillKey"])
-UiEdit(gJianZongCtrls, gJianZongGui, "JianZongSkillKey", UiRect(128, 86, 72, 24, "+ReadOnly -WantCtrlA -E0x200 Border"))
-UiPlainButton(gJianZongGui, UiRect(16, 118, 184, 26), exText["SetKey"], JianZongSetSkillKey)
-UiPlainButton(gJianZongGui, UiRect(16, 152, 184, 32), exText["CommonSave"], JianZongSave, "primary")
-UiHelpButton(gJianZongGui, UiRect(188, 16, 22, 22), JianZongHelp)
+contentRight := 200
+fieldX := 128
+fieldW := contentRight - fieldX
+
+UiExPageTitle(gJianZongGui, exText["JianZongPageTitle"], contentRight, gJianZongLayout, JianZongHelp)
+UiLabel(gJianZongGui, UiLayoutRect(gJianZongLayout, ExLayout.MarginLeft(), 54, 110, 24), exText["JianZongDelay"])
+UiEdit(gJianZongCtrls, gJianZongGui, "JianZongDelay", UiLayoutRect(gJianZongLayout, fieldX, 54, fieldW, 24, "+Number -E0x200 Border"))
+UiLabel(gJianZongGui, UiLayoutRect(gJianZongLayout, ExLayout.MarginLeft(), 86, 110, 24), exText["JianZongSkillKey"])
+UiEdit(gJianZongCtrls, gJianZongGui, "JianZongSkillKey", UiLayoutRect(gJianZongLayout, fieldX, 86, fieldW, 24, "+ReadOnly -WantCtrlA -E0x200 Border"))
+UiPlainButton(gJianZongGui, UiLayoutRect(gJianZongLayout, ExLayout.MarginLeft(), 118, contentRight - ExLayout.MarginLeft(), 26), exText["SetKey"], JianZongSetSkillKey)
+UiPlainButton(gJianZongGui, UiExSaveButtonRect(gJianZongLayout, 152, contentRight, 32), exText["CommonSave"], JianZongSave, "primary")
 
 JianZongGetCtrl(name) {
     global gJianZongCtrls
@@ -22,12 +26,12 @@ JianZongGetCtrl(name) {
 }
 
 ShowGuiJianZong(*) {
-    global gMainGui, gJianZongGui
+    global gMainGui, gJianZongGui, gJianZongLayout
     if IsObject(gMainGui) {
         gJianZongGui.Opt("+Owner" gMainGui.Hwnd)
     }
     gJianZongGui.Title := exText["JianZongTitle"]
-    gJianZongGui.Show("w220 h200")
+    gJianZongGui.Show("w" gJianZongLayout.Width() " h" gJianZongLayout.Height())
     JianZongLoadConfig()
     DisableGuiMain()
 }

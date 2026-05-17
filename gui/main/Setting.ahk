@@ -2,11 +2,12 @@
 
 global gSettingGui := Gui("-MinimizeBox -MaximizeBox")
 global gSettingCtrls := Map()
+global gSettingLayout := SettingLayout.Window()
 
 gSettingGui.OnEvent("Escape", SettingGuiEscape)
 gSettingGui.OnEvent("Close", SettingGuiClose)
 
-gSettingCtrls["Tab"] := gSettingGui.Add("Tab3", "x0 y0 w400 h300", [MainText["SettingTabGeneral"], MainText["SettingTabHelp"], MainText["SettingTabAbout"]])
+gSettingCtrls["Tab"] := gSettingGui.Add("Tab3", UiLayoutRect(gSettingLayout, 0, 0, SettingLayout.TabWidth(), SettingLayout.TabHeight()), [MainText["SettingTabGeneral"], MainText["SettingTabHelp"], MainText["SettingTabAbout"]])
 gSettingCtrls["Tab"].UseTab(MainText["SettingTabGeneral"])
 gSettingCtrls["SettingAutoStart"] := gSettingGui.Add("CheckBox", "vSettingAutoStart x16 y32 h20", MainText["SettingAutoStart"])
 gSettingCtrls["SettingOnSystemStart"] := gSettingGui.Add("CheckBox", "vSettingOnSystemStart x16 y54 h20", MainText["SettingOnSystemStart"])
@@ -37,13 +38,13 @@ SettingGuiClose(*) {
 }
 
 ShowGuiSetting(*) {
-    global gMainGui, gSettingGui
+    global gMainGui, gSettingGui, gSettingLayout
     DisableGuiMain()
     if IsObject(gMainGui) {
         gSettingGui.Opt("+Owner" gMainGui.Hwnd)
     }
     gSettingGui.Title := MainText["Setting"]
-    gSettingGui.Show("w400 h300")
+    gSettingGui.Show("w" gSettingLayout.Width() " h" gSettingLayout.Height())
     SettingLoad()
 }
 
