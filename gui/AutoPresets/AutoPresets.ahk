@@ -3,6 +3,8 @@
 global gAutoPresetsGui := Gui("-MinimizeBox -MaximizeBox")
 global gAutoPresetsCtrls := Map()
 global gAutoPresetsSelectedPreset := ""
+global gAutoPresetsSelectedSkillId := ""
+global gAutoPresetsSkillItems := []
 global gAutoPresetsLayout := AutoPresetsLayout.Window()
 
 UiApplyWindow(gAutoPresetsGui)
@@ -13,22 +15,22 @@ marginX := AutoPresetsLayout.MarginX()
 windowW := AutoPresetsLayout.WindowWidth()
 contentR := AutoPresetsLayout.ContentRight()
 listW := AutoPresetsLayout.ListWidth()
+skillListX := AutoPresetsLayout.SkillIconListX()
+skillListW := AutoPresetsLayout.SkillIconListWidth()
 rightX := AutoPresetsLayout.RightX()
 rightW := AutoPresetsLayout.RightWidth()
 pvW := AutoPresetsLayout.PreviewWidth()
 pvH := AutoPresetsLayout.PreviewHeight()
 pvY := AutoPresetsLayout.PreviewY()
-calX := AutoPresetsLayout.CalX()
-calPvW := AutoPresetsLayout.CalPreviewWidth()
-calPvH := AutoPresetsLayout.CalPreviewHeight()
-townW := AutoPresetsLayout.TownWidth()
+townX := AutoPresetsLayout.TownX()
+townPvW := AutoPresetsLayout.TownPreviewWidth()
+townPvH := AutoPresetsLayout.TownPreviewHeight()
 rowActionY := AutoPresetsLayout.RowActionY()
 apEnableY := AutoPresetsLayout.EnableY()
 apHotkeyY := AutoPresetsLayout.HotkeyY()
 middleLabelY := AutoPresetsLayout.MiddleLabelY()
-calY := AutoPresetsLayout.CalY()
+townY := AutoPresetsLayout.TownY()
 pickBtnY := AutoPresetsLayout.PickBtnY()
-calBtnY := AutoPresetsLayout.CalBtnY()
 townBtnY := AutoPresetsLayout.TownBtnY()
 lowerY := AutoPresetsLayout.LowerY()
 listY := AutoPresetsLayout.ListY()
@@ -36,22 +38,23 @@ listH := AutoPresetsLayout.ListHeight()
 saveY := AutoPresetsLayout.SaveY()
 
 UiSectionWithHelp(gAutoPresetsGui, gAutoPresetsLayout, marginX, 12, AutoPresetsText["SectionTitle"], AutoPresetsHelp, contentR)
-gAutoPresetsGui.SetFont()
 gAutoPresetsCtrls["AutoPresetsEnableVisible"] := gAutoPresetsGui.Add("CheckBox", UiLayoutRect(gAutoPresetsLayout, marginX, apEnableY, 310, 20, "vAutoPresetsEnableVisible"), AutoPresetsText["Enable"])
 gAutoPresetsCtrls["AutoPresetsEnableVisible"].OnEvent("Click", AutoPresetsSyncEnableFromUi)
 UiLabel(gAutoPresetsGui, UiLayoutRect(gAutoPresetsLayout, marginX, apHotkeyY, 140, 20), AutoPresetsText["ExtraHotkey"])
 UiEdit(gAutoPresetsCtrls, gAutoPresetsGui, "AutoPresetHotkey", UiLayoutRect(gAutoPresetsLayout, 144, apHotkeyY - 1, 112, 22, "+ReadOnly -WantCtrlA -E0x200"))
 UiPlainButton(gAutoPresetsGui, UiLayoutRect(gAutoPresetsLayout, 264, apHotkeyY - 2, 72, 24), AutoPresetsText["Capture"], AutoPresetsCaptureHotkey, "secondary")
 
-UiLabel(gAutoPresetsGui, UiLayoutRect(gAutoPresetsLayout, marginX, middleLabelY, contentR - marginX, 18), AutoPresetsText["CalTownReference"])
-gAutoPresetsCtrls["CalPreview"] := gAutoPresetsGui.Add("Picture", UiLayoutRect(gAutoPresetsLayout, calX, calY, calPvW, calPvH), "")
-gAutoPresetsCtrls["TownPreview"] := gAutoPresetsGui.Add("Picture", UiLayoutRect(gAutoPresetsLayout, AutoPresetsLayout.CalTownX(), calY, townW, calPvH), "")
+UiLabel(gAutoPresetsGui, UiLayoutRect(gAutoPresetsLayout, marginX, middleLabelY, contentR - marginX, 18), AutoPresetsText["TownReference"])
+gAutoPresetsCtrls["TownPreview"] := gAutoPresetsGui.Add("Picture", UiLayoutRect(gAutoPresetsLayout, townX, townY, townPvW, townPvH), "")
 UiPlainButton(gAutoPresetsGui, UiLayoutRect(gAutoPresetsLayout, 76, pickBtnY, 192, 30), AutoPresetsText["PickRegion"], AutoPresetsOpenPickMenu, "secondary")
-UiPlainButton(gAutoPresetsGui, UiLayoutRect(gAutoPresetsLayout, 76, calBtnY, 192, 28), AutoPresetsText["UpdateCalibrate"], AutoPresetsUpdateCalibrateIcon, "secondary")
 UiPlainButton(gAutoPresetsGui, UiLayoutRect(gAutoPresetsLayout, 76, townBtnY, 192, 28), AutoPresetsText["UpdateTown"], AutoPresetsUpdateTownIcon, "secondary")
 
 UiLabel(gAutoPresetsGui, UiLayoutRect(gAutoPresetsLayout, marginX, lowerY, listW, 20), AutoPresetsText["PresetList"])
 UiListBox(gAutoPresetsCtrls, gAutoPresetsGui, "AutoPresetPresetList", UiLayoutRect(gAutoPresetsLayout, marginX, listY, listW, listH), AutoPresetsOnPresetListChange)
+UiLabel(gAutoPresetsGui, UiLayoutRect(gAutoPresetsLayout, skillListX, lowerY, skillListW, 20), AutoPresetsText["SkillIconList"])
+UiListBox(gAutoPresetsCtrls, gAutoPresetsGui, "AutoPresetSkillIconList", UiLayoutRect(gAutoPresetsLayout, skillListX, listY, skillListW, listH), AutoPresetsOnSkillIconListChange)
+gAutoPresetsCtrls["AutoPresetSkillIconList"].OnEvent("DoubleClick", AutoPresetsRenameSkillIcon)
+OnMessage(0x0202, AutoPresetsSkillIconListOnLButtonUp)
 UiLabel(gAutoPresetsGui, UiLayoutRect(gAutoPresetsLayout, rightX, lowerY, rightW, 20), AutoPresetsText["SkillReference"])
 UiEdit(gAutoPresetsCtrls, gAutoPresetsGui, "AutoPresetSelectedName", UiLayoutRect(gAutoPresetsLayout, rightX, lowerY + 1, 1, 1, "+ReadOnly Hidden -E0x200"))
 gAutoPresetsCtrls["SkillPreview"] := gAutoPresetsGui.Add("Picture", UiLayoutRect(gAutoPresetsLayout, rightX, pvY, pvW, pvH), "")
@@ -70,16 +73,111 @@ AutoPresetsLockSkillPreview(pic) {
     }
 }
 
-AutoPresetsLockCalPreview(pic) {
+AutoPresetsLockTownPreview(pic) {
     if IsObject(pic) {
-        pic.Move(AutoPresetsLayout.CalX(), AutoPresetsLayout.CalY(), AutoPresetsLayout.CalPreviewWidth(), AutoPresetsLayout.CalPreviewHeight())
+        pic.Move(AutoPresetsLayout.TownX(), AutoPresetsLayout.TownY(), AutoPresetsLayout.TownPreviewWidth(), AutoPresetsLayout.TownPreviewHeight())
     }
 }
 
-AutoPresetsLockTownPreview(pic) {
-    if IsObject(pic) {
-        pic.Move(AutoPresetsLayout.CalTownX(), AutoPresetsLayout.CalY(), AutoPresetsLayout.TownWidth(), AutoPresetsLayout.CalPreviewHeight())
+AutoPresetsResolveSelectedSkillItem() {
+    global gAutoPresetsSkillItems, gAutoPresetsSelectedSkillId
+    listCtrl := AutoPresetsGetCtrl("AutoPresetSkillIconList")
+    if IsObject(listCtrl) {
+        idx := listCtrl.Value
+        if (idx >= 1 && idx <= gAutoPresetsSkillItems.Length) {
+            return gAutoPresetsSkillItems[idx]
+        }
     }
+    if (gAutoPresetsSelectedSkillId != "") {
+        for item in gAutoPresetsSkillItems {
+            if (item["id"] = gAutoPresetsSelectedSkillId) {
+                return item
+            }
+        }
+    }
+    return ""
+}
+
+AutoPresetsSelectSkillIconById(skillId) {
+    global gAutoPresetsSkillItems, gAutoPresetsSelectedSkillId
+    listCtrl := AutoPresetsGetCtrl("AutoPresetSkillIconList")
+    if !IsObject(listCtrl) {
+        return
+    }
+    gAutoPresetsSelectedSkillId := skillId
+    idx := 0
+    loop gAutoPresetsSkillItems.Length {
+        if (gAutoPresetsSkillItems[A_Index]["id"] = skillId) {
+            idx := A_Index
+            break
+        }
+    }
+    if (idx > 0) {
+        listCtrl.Value := idx
+    }
+    AutoPresetsRefreshSkillPreview()
+}
+
+AutoPresetsSyncSkillIconList(selectSkillId := "") {
+    global gAutoPresetsSkillItems, gAutoPresetsSelectedSkillId
+    presetName := AutoPresetsResolveSelectedPreset()
+    gAutoPresetsSkillItems := AutoPresetsSkillIcons_Load(presetName)
+    names := []
+    for item in gAutoPresetsSkillItems {
+        names.Push(item["name"])
+    }
+    listCtrl := AutoPresetsGetCtrl("AutoPresetSkillIconList")
+    if !IsObject(listCtrl) {
+        return
+    }
+    MainSetListBoxFromArray(listCtrl, names)
+    pickId := selectSkillId
+    if (pickId = "" && gAutoPresetsSkillItems.Length > 0) {
+        pickId := gAutoPresetsSkillItems[gAutoPresetsSkillItems.Length]["id"]
+    }
+    if (pickId != "") {
+        AutoPresetsSelectSkillIconById(pickId)
+    } else {
+        gAutoPresetsSelectedSkillId := ""
+        AutoPresetsRefreshSkillPreview()
+    }
+}
+
+AutoPresetsOnSkillIconListChange(*) {
+    global gAutoPresetsSkillItems, gAutoPresetsSelectedSkillId
+    listCtrl := AutoPresetsGetCtrl("AutoPresetSkillIconList")
+    if !IsObject(listCtrl) {
+        gAutoPresetsSelectedSkillId := ""
+        AutoPresetsRefreshSkillPreview()
+        return
+    }
+    idx := listCtrl.Value
+    if (idx >= 1 && idx <= gAutoPresetsSkillItems.Length) {
+        gAutoPresetsSelectedSkillId := gAutoPresetsSkillItems[idx]["id"]
+    } else {
+        gAutoPresetsSelectedSkillId := ""
+    }
+    AutoPresetsRefreshSkillPreview()
+}
+
+AutoPresetsSkillIconListOnLButtonUp(wParam, lParam, msg, hwnd) {
+    listCtrl := AutoPresetsGetCtrl("AutoPresetSkillIconList")
+    if !IsObject(listCtrl) || hwnd != listCtrl.Hwnd {
+        return
+    }
+    idx := UiListBoxDragSort_IndexFromClientPoint(listCtrl, lParam & 0xFFFF, (lParam >> 16) & 0xFFFF)
+    if (idx <= 0) {
+        return
+    }
+    global gAutoPresetsSkillItems, gAutoPresetsSelectedSkillId
+    if (idx > gAutoPresetsSkillItems.Length) {
+        return
+    }
+    skillId := gAutoPresetsSkillItems[idx]["id"]
+    if (skillId != gAutoPresetsSelectedSkillId) {
+        return
+    }
+    AutoPresetsRefreshSkillPreview()
 }
 
 AutoPresetsResolveSelectedPreset() {
@@ -142,7 +240,7 @@ AutoPresetsOnPresetListChange(*) {
         nameCtrl.Text := presetName
     }
     AutoPresetsRefreshEnableCheckbox()
-    AutoPresetsRefreshSkillPreview()
+    AutoPresetsSyncSkillIconList()
 }
 
 AutoPresetsRefreshEnableCheckbox() {
@@ -158,10 +256,11 @@ AutoPresetsRefreshSkillPreview() {
     if !IsObject(pic) {
         return
     }
-    path := AutoPresetsSkillIconPath(AutoPresetsResolveSelectedPreset())
+    item := AutoPresetsResolveSelectedSkillItem()
+    path := IsObject(item) ? item["path"] : ""
     pic.Value := ""
     AutoPresetsLockSkillPreview(pic)
-    if FileExist(path) {
+    if (path != "" && FileExist(path)) {
         tmp := AutoPresetsSkillIcon_FitPreviewTempPath()
         if AutoPresetsSkillIcon_RenderFitPreviewToFile(path, AutoPresetsLayout.PreviewWidth(), AutoPresetsLayout.PreviewHeight(), tmp) && FileExist(tmp) {
             pic.Value := tmp
@@ -172,45 +271,35 @@ AutoPresetsRefreshSkillPreview() {
     }
 }
 
-AutoPresetsRefreshCalTownPreviews() {
-    picC := AutoPresetsGetCtrl("CalPreview")
+AutoPresetsRefreshTownPreview() {
     picT := AutoPresetsGetCtrl("TownPreview")
-    if IsObject(picC) {
-        picC.Value := ""
-        AutoPresetsLockCalPreview(picC)
-        p := AutoPresetsCalibrateIconGlobalPath()
-        if FileExist(p) {
-            tmp := A_Temp "\DAF_cal_fit_preview.png"
-            if AutoPresetsSkillIcon_RenderFitPreviewToFile(p, AutoPresetsLayout.CalPreviewWidth(), AutoPresetsLayout.CalPreviewHeight(), tmp) && FileExist(tmp) {
-                picC.Value := tmp
-            } else {
-                picC.Value := p
-            }
-            AutoPresetsLockCalPreview(picC)
-        }
+    if !IsObject(picT) {
+        return
     }
-    if IsObject(picT) {
-        picT.Value := ""
-        AutoPresetsLockTownPreview(picT)
-        p2 := AutoPresetsTownIconGlobalPath()
-        if FileExist(p2) {
-            tmp2 := A_Temp "\DAF_town_fit_preview.png"
-            if AutoPresetsSkillIcon_RenderFitPreviewToFile(p2, AutoPresetsLayout.TownWidth(), AutoPresetsLayout.CalPreviewHeight(), tmp2) && FileExist(tmp2) {
-                picT.Value := tmp2
-            } else {
-                picT.Value := p2
-            }
-            AutoPresetsLockTownPreview(picT)
+    picT.Value := ""
+    AutoPresetsLockTownPreview(picT)
+    p := AutoPresetsTownIconGlobalPath()
+    if FileExist(p) {
+        tmp := A_Temp "\DAF_town_fit_preview.png"
+        if AutoPresetsSkillIcon_RenderFitPreviewToFile(p, AutoPresetsLayout.TownPreviewWidth(), AutoPresetsLayout.TownPreviewHeight(), tmp) && FileExist(tmp) {
+            picT.Value := tmp
+        } else {
+            picT.Value := p
         }
+        AutoPresetsLockTownPreview(picT)
     }
 }
 
 AutoPresetsAfterRegionPick(kind) {
-    global gAutoPresetsGui
+    global gAutoPresetsGui, gAutoPresetsSelectedSkillId
     if IsObject(gAutoPresetsGui) && WinExist("ahk_id " gAutoPresetsGui.Hwnd) {
-        AutoPresetsRefreshCalTownPreviews()
+        AutoPresetsRefreshTownPreview()
         if (kind = "skill") {
-            AutoPresetsRefreshSkillPreview()
+            item := AutoPresetsResolveSelectedSkillItem()
+            if IsObject(item) {
+                AutoPresetsSkillIcon_UpdateForPreset(AutoPresetsResolveSelectedPreset(), item["id"])
+            }
+            AutoPresetsSyncSkillIconList(gAutoPresetsSelectedSkillId)
         }
     }
 }
@@ -225,8 +314,8 @@ AutoPresetsLoadToGui() {
     }
     AutoPresetsGetCtrl("AutoPresetHotkey").Text := hk
     AutoPresetsRefreshEnableCheckbox()
-    AutoPresetsRefreshSkillPreview()
-    AutoPresetsRefreshCalTownPreviews()
+    AutoPresetsSyncSkillIconList()
+    AutoPresetsRefreshTownPreview()
 }
 
 AutoPresetsSyncEnableFromUi(*) {
@@ -294,8 +383,8 @@ AutoPresetsCaptureHotkey(*) {
 AutoPresetsUpdateSkillIcon(*) {
     PresetRegionPickCommitIfOpen()
     try {
-        AutoPresetsSkillIcon_UpdateForPreset(AutoPresetsResolveSelectedPreset())
-        AutoPresetsRefreshSkillPreview()
+        added := AutoPresetsSkillIcon_Add(AutoPresetsResolveSelectedPreset())
+        AutoPresetsSyncSkillIconList(added["id"])
     } catch Error as e {
         MsgBox(e.Message,, "Icon!")
     }
@@ -303,28 +392,39 @@ AutoPresetsUpdateSkillIcon(*) {
 
 AutoPresetsDeleteSkillIcon(*) {
     name := AutoPresetsResolveSelectedPreset()
-    if (name = "") {
+    item := AutoPresetsResolveSelectedSkillItem()
+    if (name = "" || !IsObject(item)) {
         return
     }
-    AutoPresets_OnPresetDeleted(name)
-    AutoPresetsRefreshSkillPreview()
+    AutoPresetsSkillIcon_Delete(name, item["id"])
+    AutoPresetsSyncSkillIconList()
 }
 
-AutoPresetsUpdateCalibrateIcon(*) {
-    PresetRegionPickCommitIfOpen()
-    try {
-        AutoPresetsCalibrateIcon_UpdateCurrent()
-        AutoPresetsRefreshCalTownPreviews()
-    } catch Error as e {
-        MsgBox(e.Message,, "Icon!")
+AutoPresetsRenameSkillIcon(*) {
+    name := AutoPresetsResolveSelectedPreset()
+    item := AutoPresetsResolveSelectedSkillItem()
+    if (name = "" || !IsObject(item)) {
+        return
     }
+    ret := InputBox(AutoPresetsText["RenameSkillIconPrompt"], AutoPresetsText["RenameSkillIconTitle"], "w280 h130", item["name"])
+    if (ret.Result != "OK") {
+        return
+    }
+    newName := Trim(ret.Value)
+    if (newName = "") {
+        return
+    }
+    if !AutoPresetsSkillIcon_Rename(name, item["id"], newName) {
+        return
+    }
+    AutoPresetsSyncSkillIconList(item["id"])
 }
 
 AutoPresetsUpdateTownIcon(*) {
     PresetRegionPickCommitIfOpen()
     try {
         AutoPresetsTownIcon_UpdateCurrent()
-        AutoPresetsRefreshCalTownPreviews()
+        AutoPresetsRefreshTownPreview()
     } catch Error as e {
         MsgBox(e.Message,, "Icon!")
     }
@@ -333,7 +433,6 @@ AutoPresetsUpdateTownIcon(*) {
 AutoPresetsOpenPickMenu(*) {
     m := Menu()
     m.Add(AutoPresetsText["SkillRegion"], (*) => PresetRegionPickOpen("skill"))
-    m.Add(AutoPresetsText["CalibrateRegion"], (*) => PresetRegionPickOpen("calibrate"))
     m.Add(AutoPresetsText["TownRegion"], (*) => PresetRegionPickOpen("town"))
     m.Show()
 }

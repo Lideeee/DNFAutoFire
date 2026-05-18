@@ -4,6 +4,7 @@ global gSettingGui := Gui("-MinimizeBox -MaximizeBox")
 global gSettingCtrls := Map()
 global gSettingLayout := SettingLayout.Window()
 
+UiApplyWindow(gSettingGui)
 gSettingGui.OnEvent("Escape", SettingGuiEscape)
 gSettingGui.OnEvent("Close", SettingGuiClose)
 

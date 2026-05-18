@@ -73,7 +73,7 @@ UiRowY(index, start := 8, step := 24) {
 
 class MainKeyLayoutData {
     static BaseX() => 16
-    static TopRowY() => 40
+    static TopRowY() => 42
     static MainRowY() => this.TopRowY() + this.Height() + this.Gap()
     static Unit() => 40
     static Gap() => 4

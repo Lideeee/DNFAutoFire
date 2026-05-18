@@ -211,16 +211,15 @@ PresetRegionPickOpen(kind := "skill") {
     gAutoPresetsRegionPickGui.MarginX := 0
     gAutoPresetsRegionPickGui.MarginY := 0
     gAutoPresetsRegionPickGui.BackColor := "FFFFFF"
+    UiInstallBlankClickBlur(gAutoPresetsRegionPickGui)
     gAutoPresetsRegionPickGui.OnEvent("Close", PresetRegionPickCancel)
     gAutoPresetsRegionPickGui.OnEvent("Size", PresetRegionPickLayoutHint)
-    gAutoPresetsRegionPickGui.SetFont("s10", "Microsoft YaHei UI")
+    UiSetDefaultFont(gAutoPresetsRegionPickGui, "s10 " UiTheme["TextColor"])
     gAutoPresetsRegionPickHintText := gAutoPresetsRegionPickGui.Add("Text", "x0 y0 w200 h90 BackgroundTrans +Center 0x200", AutoPresetsText["RegionPickHint"])
     gAutoPresetsRegionPickGui.Show("Hide w200 h90")
     PresetRegionPickLayoutHint(gAutoPresetsRegionPickGui, 0, 200, 90)
     hwnd := gAutoPresetsRegionPickGui.Hwnd
-    if (kind = "calibrate") {
-        r := ParseAutoPresetCalibrateRegion()
-    } else if (kind = "town") {
+    if (kind = "town") {
         r := ParseAutoPresetTownRegion()
     } else {
         r := ParseAutoPresetRegion()
@@ -324,9 +323,7 @@ PresetRegionPickOk(*) {
     w := cr["w"]
     h := cr["h"]
     kind := gAutoPresetsRegionPickKind
-    if (kind = "calibrate") {
-        SaveAutoPresetCalibrateRegion(x, y, w, h)
-    } else if (kind = "town") {
+    if (kind = "town") {
         SaveAutoPresetTownRegion(x, y, w, h)
     } else {
         SaveAutoPresetRegion(x, y, w, h)

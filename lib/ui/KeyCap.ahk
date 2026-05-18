@@ -51,10 +51,7 @@ class MainKeyCap {
             }
         }
         this._createLabelCtrl()
-        if !this.locked && this.onClick != "" {
-            UiRegisterHandCursor(this.ctrl)
-            this.ctrl.OnEvent("Click", this.onClick)
-        }
+        this._bindClickEvent(this.ctrl)
     }
 
     _createLabelCtrl() {
@@ -65,11 +62,22 @@ class MainKeyCap {
         fontSize := UiMainKeyLabelFontSize(this.name)
         this.gui.SetFont(fontSize " c" color " norm", this._labelFontFace())
         this.labelCtrl := this.gui.Add("Text", this._labelOpts(), this.displayLabel)
-        if !this.locked && this.onClick != "" {
-            this.labelCtrl.OnEvent("Click", this.onClick)
-            UiRegisterHandCursor(this.labelCtrl)
-        }
+        this._bindClickEvent(this.labelCtrl)
         this._createAuxLabelCtrl()
+    }
+
+    _bindClickEvent(ctrl) {
+        if !IsObject(ctrl) || this.locked || this.onClick = "" {
+            return
+        }
+        ctrl.OnEvent("Click", ObjBindMethod(this, "_handleClick"))
+    }
+
+    _handleClick(*) {
+        if !IsObject(this.ctrl) || this.onClick = "" {
+            return
+        }
+        this.onClick.Call(this.ctrl)
     }
 
     _renderBitmap() {
@@ -135,10 +143,7 @@ class MainKeyCap {
         color := this._labelColor()
         this.gui.SetFont("s10 c" color " norm", "Segoe Fluent Icons")
         this.auxLabelCtrl := this.gui.Add("Text", "x" (this.x + 6) " y" (this.y + 6) " w18 h" (this.h - 8) " +0x200 +Center BackgroundTrans E0x20", Chr(0xE752))
-        if !this.locked && this.onClick != "" {
-            this.auxLabelCtrl.OnEvent("Click", this.onClick)
-            UiRegisterHandCursor(this.auxLabelCtrl)
-        }
+        this._bindClickEvent(this.auxLabelCtrl)
     }
 
     _labelFontFace() {
@@ -199,12 +204,15 @@ class MainKeyCap {
     }
 
     static _Tick(*) {
+        snapshot := UiHoverSnapshot()
+        under := snapshot["hwnd"]
+        lb := snapshot["leftButtonDown"]
         for keyCap in MainKeyCap._all {
-            keyCap._pollState()
+            keyCap._pollState(under, lb)
         }
     }
 
-    _pollState() {
+    _pollState(under, lb) {
         if (this.locked) {
             return
         }
@@ -215,7 +223,6 @@ class MainKeyCap {
         if !hw {
             return
         }
-        MouseGetPos(, , &under)
         over := (under = hw)
         if IsObject(this.labelCtrl) {
             try {
@@ -233,7 +240,6 @@ class MainKeyCap {
             } catch {
             }
         }
-        lb := GetKeyState("LButton", "P")
         nextState := "normal"
         if over && lb {
             nextState := "pressed"

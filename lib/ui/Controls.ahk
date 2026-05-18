@@ -31,7 +31,7 @@ UiSection(gui, options, title) {
     y := UiOptionNumber(options, "y")
     w := UiOptionNumber(options, "w", 120)
     UiSetDefaultFont(gui, "s9 Bold " UiTheme["SectionColor"])
-    return gui.Add("Text", UiRect(x, y, w, 20, "+0x200"), title)
+    return gui.Add("Text", UiRect(x, y + 6, w, 20, "+0x200 BackgroundTrans"), title)
 }
 
 UiLabel(gui, options, text) {

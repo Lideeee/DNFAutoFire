@@ -49,7 +49,6 @@ MainAddExFeatureRow(name, colX, y, toggleW, linkW, linkText, linkHandler) {
     linkX := colX + toggleW + 8
     textCtrl := MainAdd("Text", "vMainExLink_" name " x" linkX " y" y " w" linkW " h22 +0x200 +0x100", linkText)
     textCtrl.OnEvent("Click", linkHandler)
-    UiRegisterHandCursor(textCtrl)
     MainMutedLinkRegister(textCtrl)
 }
 
@@ -94,7 +93,8 @@ MainMutedLinkPoll(*) {
     if (gMainMutedLinks.Length = 0) {
         return
     }
-    MouseGetPos(&_mx, &_my, &hwUnder)
+    snapshot := UiHoverSnapshot()
+    hwUnder := snapshot["hwnd"]
     for item in gMainMutedLinks {
         isOver := (hwUnder = item.hwnd)
         if (isOver && !item.hover) {
@@ -145,16 +145,17 @@ MainBuildPresetPanel() {
     global gMainGui, gMainCtrls
     panelX := MainLayout.StandardMargin(), panelY := MainLayout.BottomY()
     panelW := MainLayout.ButtonColumnX() - panelX - MainLayout.StandardMargin()
+    titleW := MainLayout.GuiWidth() - panelX - MainLayout.StandardMargin()
     listH := MainLayout.ConfigListHeight()
     fx := MainLayout.ConfigFieldX()
     fw := MainLayout.ConfigFieldWidth()
     feh := MainLayout.ConfigFieldEditHeight()
 
-    UiSection(gMainGui, UiRect(panelX, panelY, panelW, 20), MainText["PresetSection"])
+    UiSection(gMainGui, UiRect(panelX, panelY, titleW, 20), MainText["PresetSection"])
     presetCtrl := UiListBox(gMainCtrls, gMainGui, "Preset", UiRect(MainLayout.ConfigListX(), MainLayout.ConfigListTop(), MainLayout.ConfigListWidth(), listH), MainChangePresetByList)
     UiListBoxDragSort_Attach(presetCtrl, MainPresetDragGetItems, MainPresetDragRender, MainPresetDragCommit, MainPresetDragClick)
     UiLabel(gMainGui, UiRect(fx, MainLayout.ConfigFieldLabelY(1), fw, MainLayout.ConfigFieldLabelHeight()), MainText["CurrentPreset"])
-    MainAdd("Text", "vCurrentPresetLabel " UiRect(fx, MainLayout.ConfigFieldEditY(1), fw, feh, "+0x200 +0x400000"), "")
+    UiEdit(gMainCtrls, gMainGui, "CurrentPresetLabel", UiRect(fx, MainLayout.ConfigFieldEditY(1), fw, feh, "+ReadOnly -WantCtrlA -E0x200 Border"))
 
     UiLabel(gMainGui, UiRect(fx, MainLayout.ConfigFieldLabelY(2), fw, MainLayout.ConfigFieldLabelHeight()), MainText["AutoFireInterval"])
     UiEdit(gMainCtrls, gMainGui, "AutoFireIntervalMs", UiRect(fx, MainLayout.ConfigFieldEditY(2), fw, feh, "+Number +Limit3 -E0x200 Border"))
@@ -179,6 +180,7 @@ MainBuildFeaturePanel() {
     global gMainGui, gMainCtrls
     panelX := MainLayout.ExLeftColumnX(), panelY := MainLayout.BottomY()
     panelW := MainLayout.ButtonColumnX() - panelX - 8
+    titleW := MainLayout.GuiWidth() - panelX - MainLayout.StandardMargin()
     panelH := MainLayout.GuiHeight() - panelY - 8
     tw := MainLayout.ExToggleWidth()
     rowH := MainLayout.ExRowHeight()
@@ -188,7 +190,7 @@ MainBuildFeaturePanel() {
         MainAdd("CheckBox", "v" name " Hidden x-2000 y-2000 w1 h1 -TabStop")
     }
 
-    UiSection(gMainGui, UiRect(panelX, panelY, panelW, panelH), MainText["FeatureSection"])
+    UiSection(gMainGui, UiRect(panelX, panelY, titleW, panelH), MainText["FeatureSection"])
     leftRows := [
         ["LvRen", MainText["LvRen"], MainLvRen, MainLayout.ExLeftColumnX(), MainLayout.ExLeftLinkWidth()],
         ["GuanYu", MainText["GuanYu"], MainGuanYu, MainLayout.ExLeftColumnX(), MainLayout.ExLeftLinkWidth()],
@@ -488,7 +490,7 @@ MainLoadEx() {
 }
 
 MainSetCurrentPresetLabel(presetName) {
-    MainGetCtrl("CurrentPresetLabel").Text := presetName
+    MainGetCtrl("CurrentPresetLabel").Value := presetName
 }
 
 MainRefreshPresetUi() {

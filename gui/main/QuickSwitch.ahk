@@ -4,11 +4,11 @@ global gQuickSwitchGui := Gui("-MinimizeBox -MaximizeBox -SysMenu +AlwaysOnTop +
 global gQuickSwitchCtrls := Map()
 global gQuickSwitchLayout := QuickSwitchLayout.Window()
 
+UiApplyWindow(gQuickSwitchGui)
 gQuickSwitchGui.OnEvent("Escape", QuickSwitchGuiEscape)
 gQuickSwitchGui.OnEvent("Close", QuickSwitchGuiClose)
 gQuickSwitchCtrls["QuickSwitchList"] := gQuickSwitchGui.Add("ListBox", UiLayoutRect(gQuickSwitchLayout, 12, 12, 244, 132, "vQuickSwitchList"))
 gQuickSwitchCtrls["QuickSwitchList"].OnEvent("DoubleClick", QuickSwitchChangeList)
-gQuickSwitchGui.SetFont()
 gQuickSwitchGui.Add("Text", UiLayoutRect(gQuickSwitchLayout, 12, 152, 244, 44), MainText["QuickSwitchHint"])
 gQuickSwitchGui.Add("Button", UiLayoutRect(gQuickSwitchLayout, 12, 204, 118, 38), MainText["QuickSwitchStart"]).OnEvent("Click", QuickSwitchStart)
 gQuickSwitchGui.Add("Button", UiLayoutRect(gQuickSwitchLayout, 138, 204, 118, 38), MainText["QuickSwitchStop"]).OnEvent("Click", QuickSwitchStop)

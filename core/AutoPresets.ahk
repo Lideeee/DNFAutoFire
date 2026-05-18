@@ -1,12 +1,12 @@
 #Requires AutoHotkey v2.0
 
-; 自动识别配置：搜图匹配技能栏/血条/城镇参考图后切换预设
+; 自动识别配置：搜图匹配城镇与技能栏参考图后切换预设
 
 class AutoPresets {
-    static RetryIntervalMs := 250
-    static MaxRetryAttempts := 240
+    static StartDelayMs := 500
+    static RetryIntervalMs := 500
+    static MaxRetryAttempts := 60
     static SkillImageVariation := 80
-    static CalibrateImageVariation := 80
     static TownImageVariation := 20
     static _retryTimer := false
     static _startTimer := false
@@ -44,8 +44,12 @@ AutoPresetsSkillIcon_SafeName(presetName) {
     return RegExReplace(StrReplace(presetName, "|", "_"), '[\\/:\*\?"<>\|]', "_")
 }
 
-AutoPresetsSkillIconPath(presetName) {
-    return AutoPresetsSkillIconDir() "\" AutoPresetsSkillIcon_SafeName(presetName) ".png"
+AutoPresetsSkillPresetDir(presetName) {
+    return AutoPresetsSkillIconDir() "\" AutoPresetsSkillIcon_SafeName(presetName)
+}
+
+AutoPresetsSkillIconPathForId(presetName, skillId) {
+    return AutoPresetsSkillPresetDir(presetName) "\" skillId ".png"
 }
 
 AutoPresetsSkillIcon_EnsureDir() {
@@ -55,14 +59,225 @@ AutoPresetsSkillIcon_EnsureDir() {
     }
 }
 
-AutoPresets_OnPresetCloned(oldName, newName) {
-    src := AutoPresetsSkillIconPath(oldName)
-    if !FileExist(src) {
+AutoPresetsSkillIcons_ParseStored(raw) {
+    out := Map()
+    raw := Trim(raw)
+    if (raw = "") {
+        return out
+    }
+    for part in StrSplit(raw, "|") {
+        part := Trim(part)
+        if (part = "") {
+            continue
+        }
+        eq := InStr(part, "=")
+        if !eq {
+            continue
+        }
+        id := Trim(SubStr(part, 1, eq - 1))
+        name := Trim(SubStr(part, eq + 1))
+        if (id != "" && name != "") {
+            out[id] := name
+        }
+    }
+    return out
+}
+
+AutoPresetsSkillIcons_FormatStored(items) {
+    parts := []
+    for item in items {
+        parts.Push(item["id"] "=" item["name"])
+    }
+    if (parts.Length = 0) {
+        return ""
+    }
+    out := parts[1]
+    loop parts.Length - 1 {
+        out .= "|" parts[A_Index + 1]
+    }
+    return out
+}
+
+AutoPresetsSkillIcons_SortItems(items) {
+    if (items.Length < 2) {
+        return items
+    }
+    order := []
+    byId := Map()
+    for item in items {
+        order.Push(item["id"])
+        byId[item["id"]] := item
+    }
+    loop order.Length - 1 {
+        loop order.Length - A_Index {
+            i := A_Index
+            ai := 0
+            bi := 0
+            try ai := Integer(order[i])
+            catch {
+                ai := 0
+            }
+            try bi := Integer(order[i + 1])
+            catch {
+                bi := 0
+            }
+            if (ai > bi) {
+                tmp := order[i]
+                order[i] := order[i + 1]
+                order[i + 1] := tmp
+            }
+        }
+    }
+    sorted := []
+    for id in order {
+        sorted.Push(byId[id])
+    }
+    return sorted
+}
+
+AutoPresetsSkillIcons_Load(presetName) {
+    name := Trim(presetName)
+    if (name = "") {
+        return []
+    }
+    nameMap := AutoPresetsSkillIcons_ParseStored(LoadPreset(name, "AutoPresetSkillIcons", ""))
+    items := []
+    dir := AutoPresetsSkillPresetDir(name)
+    if !DirExist(dir) {
+        return items
+    }
+    Loop Files dir "\*.png" {
+        id := RegExReplace(A_LoopFileName, "\.png$", "", , 1)
+        if (id = "") {
+            continue
+        }
+        path := A_LoopFileFullPath
+        displayName := nameMap.Has(id) ? nameMap[id] : ("角色" id)
+        items.Push(Map("id", id, "name", displayName, "path", path))
+    }
+    return AutoPresetsSkillIcons_SortItems(items)
+}
+
+AutoPresetsSkillIcons_Save(presetName, items) {
+    name := Trim(presetName)
+    if (name = "") {
         return
     }
+    SavePreset(name, "AutoPresetSkillIcons", AutoPresetsSkillIcons_FormatStored(items))
+}
+
+AutoPresetsSkillIcons_NextId(presetName) {
+    maxId := 0
+    for item in AutoPresetsSkillIcons_Load(presetName) {
+        try n := Integer(item["id"])
+        catch {
+            n := 0
+        }
+        if (n > maxId) {
+            maxId := n
+        }
+    }
+    return String(maxId + 1)
+}
+
+AutoPresetsSkillIcons_NextDefaultName(presetName) {
+    maxN := 0
+    for item in AutoPresetsSkillIcons_Load(presetName) {
+        try n := Integer(item["id"])
+        catch {
+            n := 0
+        }
+        if (n > maxN) {
+            maxN := n
+        }
+        if RegExMatch(item["name"], "^角色(\d+)$", &m) {
+            nn := m[1] + 0
+            if (nn > maxN) {
+                maxN := nn
+            }
+        }
+    }
+    return "角色" (maxN + 1)
+}
+
+AutoPresetsSkillIcon_Add(presetName) {
+    name := Trim(presetName)
+    if (name = "") {
+        throw Error("当前没有选中的配置。")
+    }
     AutoPresetsSkillIcon_EnsureDir()
-    dest := AutoPresetsSkillIconPath(newName)
-    try FileCopy(src, dest, true)
+    dir := AutoPresetsSkillPresetDir(name)
+    if !DirExist(dir) {
+        DirCreate(dir)
+    }
+    skillId := AutoPresetsSkillIcons_NextId(name)
+    displayName := AutoPresetsSkillIcons_NextDefaultName(name)
+    path := AutoPresetsSkillIconPathForId(name, skillId)
+    r := AutoPresets_ResolveRegion(ParseAutoPresetRegion())
+    AutoPresetsCaptureRegionToPng(path, r["x"], r["y"], r["w"], r["h"])
+    items := AutoPresetsSkillIcons_Load(name)
+    items.Push(Map("id", skillId, "name", displayName, "path", path))
+    AutoPresetsSkillIcons_Save(name, items)
+    return Map("id", skillId, "name", displayName, "path", path)
+}
+
+AutoPresetsSkillIcon_Delete(presetName, skillId) {
+    name := Trim(presetName)
+    skillId := Trim(skillId)
+    if (name = "" || skillId = "") {
+        return
+    }
+    path := AutoPresetsSkillIconPathForId(name, skillId)
+    if FileExist(path) {
+        try FileDelete(path)
+    }
+    kept := []
+    for item in AutoPresetsSkillIcons_Load(name) {
+        if (item["id"] != skillId) {
+            kept.Push(item)
+        }
+    }
+    AutoPresetsSkillIcons_Save(name, kept)
+}
+
+AutoPresetsSkillIcon_Rename(presetName, skillId, newName) {
+    name := Trim(presetName)
+    skillId := Trim(skillId)
+    newName := Trim(newName)
+    if (name = "" || skillId = "" || newName = "") {
+        return false
+    }
+    items := AutoPresetsSkillIcons_Load(name)
+    found := false
+    for item in items {
+        if (item["id"] = skillId) {
+            item["name"] := newName
+            found := true
+            break
+        }
+    }
+    if !found {
+        return false
+    }
+    AutoPresetsSkillIcons_Save(name, items)
+    return true
+}
+
+AutoPresetsSkillIcons_CopyDir(srcPreset, destPreset) {
+    srcDir := AutoPresetsSkillPresetDir(srcPreset)
+    destDir := AutoPresetsSkillPresetDir(destPreset)
+    if DirExist(destDir) {
+        try DirDelete(destDir, true)
+    }
+    if DirExist(srcDir) {
+        AutoPresetsSkillIcon_EnsureDir()
+        try DirCopy(srcDir, destDir, true)
+    }
+}
+
+AutoPresets_OnPresetCloned(oldName, newName) {
+    AutoPresetsSkillIcons_CopyDir(oldName, newName)
+    SavePreset(newName, "AutoPresetSkillIcons", LoadPreset(oldName, "AutoPresetSkillIcons", ""))
 }
 
 AutoPresets_OnPresetRenamed(oldName, newName) {
@@ -71,16 +286,10 @@ AutoPresets_OnPresetRenamed(oldName, newName) {
 }
 
 AutoPresets_OnPresetDeleted(presetName) {
-    path := AutoPresetsSkillIconPath(presetName)
-    if FileExist(path) {
-        try FileDelete(path)
+    dir := AutoPresetsSkillPresetDir(presetName)
+    if DirExist(dir) {
+        try DirDelete(dir, true)
     }
-}
-
-AutoPresetsCalibrateIconDir() => AutoPresetsAssetDir() "\calibrate"
-
-AutoPresetsCalibrateIconGlobalPath() {
-    return AutoPresetsCalibrateIconDir() "\calibrate.png"
 }
 
 AutoPresetsTownIconDir() => AutoPresetsAssetDir() "\town"
@@ -131,14 +340,6 @@ SaveAutoPresetRegionByKey(configKey, x, y, w, h) {
     SaveConfig(configKey, x "|" y "|" w "|" h)
 }
 
-ParseAutoPresetCalibrateRegion() {
-    return ParseAutoPresetRegionByKey("AutoPresetCalibrateRegion")
-}
-
-SaveAutoPresetCalibrateRegion(x, y, w, h) {
-    SaveAutoPresetRegionByKey("AutoPresetCalibrateRegion", x, y, w, h)
-}
-
 ParseAutoPresetTownRegion() {
     return ParseAutoPresetRegionByKey("AutoPresetTownRegion")
 }
@@ -147,17 +348,8 @@ SaveAutoPresetTownRegion(x, y, w, h) {
     SaveAutoPresetRegionByKey("AutoPresetTownRegion", x, y, w, h)
 }
 
-AutoPresets_HasAnyCalibratePng() {
-    return FileExist(AutoPresetsCalibrateIconGlobalPath())
-}
-
 AutoPresets_HasAnyTownPng() {
     return FileExist(AutoPresetsTownIconGlobalPath())
-}
-
-AutoPresets_FirstPresetName() {
-    presetList := LoadAllPreset()
-    return presetList.Length >= 1 ? presetList[1] : ""
 }
 
 AutoPresets_GameActive() {
@@ -333,45 +525,11 @@ AutoPresetsSkillIcon_RenderFitPreviewToFile(srcPath, boxW, boxH, destPath) {
     return true
 }
 
-AutoPresetsCalibrateIcon_UpdateCurrent() {
-    r := AutoPresets_ResolveRegion(ParseAutoPresetCalibrateRegion())
-    path := AutoPresetsCalibrateIconGlobalPath()
-    AutoPresetsCaptureRegionToPng(path, r["x"], r["y"], r["w"], r["h"])
-    return path
-}
-
 AutoPresetsTownIcon_UpdateCurrent() {
     r := AutoPresets_ResolveRegion(ParseAutoPresetTownRegion())
     path := AutoPresetsTownIconGlobalPath()
     AutoPresetsCaptureRegionToPng(path, r["x"], r["y"], r["w"], r["h"])
     return path
-}
-
-AutoPresetsCalibrateIconMatches() {
-    r := AutoPresets_ResolveRegion(ParseAutoPresetCalibrateRegion())
-    path := AutoPresetsCalibrateIconGlobalPath()
-    if !FileExist(path) {
-        return false
-    }
-    x1 := r["x"]
-    y1 := r["y"]
-    x2 := x1 + r["w"] - 1
-    y2 := y1 + r["h"] - 1
-    variation := AutoPresets.CalibrateImageVariation
-    optPrefix := "*" variation " "
-    needle := optPrefix . path
-    prevPixel := CoordMode("Pixel", "Screen")
-    try {
-        try {
-            if ImageSearch(&_icx, &_icy, x1, y1, x2, y2, needle) {
-                return true
-            }
-        } catch TargetError {
-        }
-        return false
-    } finally {
-        CoordMode("Pixel", prevPixel)
-    }
 }
 
 AutoPresetsTownIconMatches() {
@@ -401,13 +559,17 @@ AutoPresetsTownIconMatches() {
     }
 }
 
-AutoPresetsSkillIcon_UpdateForPreset(presetName) {
-    r := AutoPresets_ResolveRegion(ParseAutoPresetRegion())
+AutoPresetsSkillIcon_UpdateForPreset(presetName, skillId := "") {
     name := Trim(presetName)
     if (name = "") {
         throw Error("当前没有选中的配置。")
     }
-    path := AutoPresetsSkillIconPath(name)
+    skillId := Trim(skillId)
+    if (skillId = "") {
+        return AutoPresetsSkillIcon_Add(name)
+    }
+    path := AutoPresetsSkillIconPathForId(name, skillId)
+    r := AutoPresets_ResolveRegion(ParseAutoPresetRegion())
     AutoPresetsCaptureRegionToPng(path, r["x"], r["y"], r["w"], r["h"])
     return path
 }
@@ -423,16 +585,18 @@ AutoPresetsFindPresetBySkillIcon() {
     prevPixel := CoordMode("Pixel", "Screen")
     try {
         for presetName in LoadAllPreset() {
-            path := AutoPresetsSkillIconPath(presetName)
-            if !FileExist(path) {
-                continue
-            }
-            needle := optPrefix . path
-            try {
-                if ImageSearch(&_isx, &_isy, x1, y1, x2, y2, needle) {
-                    return presetName
+            for item in AutoPresetsSkillIcons_Load(presetName) {
+                path := item["path"]
+                if !FileExist(path) {
+                    continue
                 }
-            } catch TargetError {
+                needle := optPrefix . path
+                try {
+                    if ImageSearch(&_isx, &_isy, x1, y1, x2, y2, needle) {
+                        return presetName
+                    }
+                } catch TargetError {
+                }
             }
         }
         return ""
@@ -492,7 +656,7 @@ AutoPresets_Request(requireActive := false) {
     sequenceId := AutoPresets_StartNewSequence()
     fn := AutoPresets_Begin.Bind(sessionId, sequenceId, 1)
     AutoPresets._startTimer := fn
-    SetTimer(fn, -AutoPresets.RetryIntervalMs)
+    SetTimer(fn, -AutoPresets.StartDelayMs)
 }
 
 AutoPresets_IsFeatureEnabledForRunningPreset() {
@@ -532,6 +696,19 @@ AutoPresets_Begin(sessionId, sequenceId, attemptIdx, *) {
     SetTimer(fn, -AutoPresets.RetryIntervalMs)
 }
 
+AutoPresets_ScheduleNextAttempt(sessionId, sequenceId, attemptIdx) {
+    AutoPresets_ClearRetryTimer()
+    if (attemptIdx >= AutoPresets.MaxRetryAttempts) {
+        return
+    }
+    if !AutoPresets_IsCurrentSequence(sessionId, sequenceId) {
+        return
+    }
+    fn := AutoPresets_RunAttempt.Bind(sessionId, sequenceId, attemptIdx + 1)
+    AutoPresets._retryTimer := fn
+    SetTimer(fn, -AutoPresets.RetryIntervalMs)
+}
+
 AutoPresets_RunAttempt(sessionId, sequenceId, attemptIdx) {
     if !AutoPresets_IsCurrentSequence(sessionId, sequenceId) {
         return
@@ -545,45 +722,20 @@ AutoPresets_RunAttempt(sessionId, sequenceId, attemptIdx) {
         return
     }
     if !AutoPresets_GameActive() {
-        if (attemptIdx >= AutoPresets.MaxRetryAttempts) {
-            AutoPresets_ClearRetryTimer()
-            return
-        }
-        fn := AutoPresets_RunAttempt.Bind(sessionId, sequenceId, attemptIdx + 1)
-        AutoPresets._retryTimer := fn
-        SetTimer(fn, -AutoPresets.RetryIntervalMs)
+        AutoPresets_ScheduleNextAttempt(sessionId, sequenceId, attemptIdx)
         return
     }
-    if !AutoPresets_HasAnyCalibratePng() || !AutoPresetsCalibrateIconMatches() {
-        if (attemptIdx >= AutoPresets.MaxRetryAttempts) {
-            AutoPresets_ClearRetryTimer()
-            return
-        }
-        fn := AutoPresets_RunAttempt.Bind(sessionId, sequenceId, attemptIdx + 1)
-        AutoPresets._retryTimer := fn
-        SetTimer(fn, -AutoPresets.RetryIntervalMs)
-        return
-    }
-
-    if !AutoPresets_HasAnyTownPng() || !AutoPresetsTownIconMatches() {
+    if AutoPresets_HasAnyTownPng() && AutoPresetsTownIconMatches() {
         AutoPresets_ClearRetryTimer()
         return
     }
 
     found := AutoPresetsFindPresetBySkillIcon()
     current := GetNowSelectPreset()
-    AutoPresets_ClearRetryTimer()
     if (found != "" && found != current) {
         AutoPresets_ApplySwitchOnMain(found)
-        return
     }
-    if (found != "" && found = current) {
-        return
-    }
-    firstN := AutoPresets_FirstPresetName()
-    if (firstN != "" && firstN != current) {
-        AutoPresets_ApplySwitchOnMain(firstN)
-    }
+    AutoPresets_ScheduleNextAttempt(sessionId, sequenceId, attemptIdx)
 }
 
 AutoPresets_ApplySwitchOnMain(presetName) {

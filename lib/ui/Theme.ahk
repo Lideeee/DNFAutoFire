@@ -1,7 +1,7 @@
 #Requires AutoHotkey v2.0
 
 global UiTheme := Map(
-    "FontName", "Segoe UI",
+    "FontName", "Microsoft YaHei UI",
     "KeyFace", "Segoe UI",
     "FontSize", "s9",
     "TextColor", "c202124",
@@ -10,41 +10,68 @@ global UiTheme := Map(
     "PrimaryColor", "c2563EB",
     "DangerColor", "cB42318",
     "KeyOff", "334155",
-    "KeyOn", "355FA3",
+    "KeyOn", "2F5B9C",
     "KeyOv", "355FA3",
     "KeyOffColor", "c334155",
-    "KeyOnColor", "c355FA3",
+    "KeyOnColor", "c2F5B9C",
     "KeyDisabledColor", "c94A3B8",
     "KeyCellBg", "E2E8F0",
     "KeyCapOffBg", "F8FAFC",
     "KeyCapOffBorder", "CBD5E1",
-    "KeyCapOnBg", "EAF2FF",
-    "KeyCapOnBorder", "B7CCEE",
+    "KeyCapOnBg", "E3EEFF",
+    "KeyCapOnBorder", "A7C2EE",
     "KeyCapOvBg", "EAF2FF",
     "KeyCapOvBorder", "B7CCEE",
     "KeyCapLockedBg", "E5E7EB",
     "KeyCapLockedBorder", "CBD5E1",
     "KeyCapLockedText", "94A3B8",
-    "KeyCapHintOn", "355FA3",
+    "KeyCapHintOn", "2F5B9C",
     "KeyCapHintOv", "355FA3",
     "KeyCapHintLocked", "94A3B8",
-    "SwitchTrackOn", "93C5FD",
+    "SwitchTrackOff", "D5D9E0",
+    "SwitchTrackOffHover", "CDD3DB",
+    "SwitchTrackOffPressed", "C3CAD4",
+    "SwitchTrackOn", "4F7FD1",
+    "SwitchTrackOnHover", "5B89D8",
+    "SwitchTrackOnPressed", "456FBB",
+    "SwitchThumb", "FFFFFF",
+    "SwitchThumbPressed", "F4F6F8",
+    "SwitchBorder", "CBD5E1",
+    "SwitchBorderOn", "5B82C8",
+    "ButtonBg", "FAFAFB",
+    "ButtonBgHover", "F3F6FA",
+    "ButtonBgPressed", "ECEFF4",
+    "ButtonBorder", "C9D1DB",
+    "ButtonBorderHover", "B8C3D1",
+    "ButtonBorderPressed", "AEB9C7",
+    "ButtonPrimaryBg", "4F7FD1",
+    "ButtonPrimaryBgHover", "5A88D7",
+    "ButtonPrimaryBgPressed", "456FBB",
+    "ButtonPrimaryBorder", "4B78C5",
+    "ButtonPrimaryBorderHover", "5C88D2",
+    "ButtonPrimaryBorderPressed", "4067AF",
+    "ButtonDangerBg", "FBFBFC",
+    "ButtonDangerBgHover", "F8F3F3",
+    "ButtonDangerBgPressed", "F3EBEB",
+    "ButtonDangerBorder", "D8DDE5",
+    "ButtonDangerBorderHover", "C9D2DC",
+    "ButtonDangerBorderPressed", "BEC8D3",
+    "ButtonText", "1F2937",
+    "ButtonPrimaryText", "FFFFFF",
+    "ButtonDangerText", "B42318",
     "MutedLinkHover", "c5B84D9",
     "WindowBg", "F8FAFC"
 )
 
-global UiTheme__HandCursorHwnds := Map()
-global UiTheme__HandCursorHandle := 0
+global UiTheme__HoverState := Map("tick", 0, "hwnd", 0, "windowHwnd", 0, "controlHwnd", 0, "rootHwnd", 0, "leftButtonDown", false)
+global UiBlankClickBlur__Entries := []
+global UiBlankClickBlur__OnMessageInstalled := false
 
 UiApplyWindow(gui) {
     global UiTheme
     gui.BackColor := UiTheme["WindowBg"]
     gui.SetFont(UiTheme["FontSize"] " c" UiTheme["KeyOff"], UiTheme["FontName"])
-    static cursorHooked := false
-    if !cursorHooked {
-        cursorHooked := true
-        OnMessage(0x0020, UiTheme__OnSetCursor)
-    }
+    UiInstallBlankClickBlur(gui)
 }
 
 UiSetDefaultFont(gui, options := "") {
@@ -85,54 +112,72 @@ UiMainKeyLabelFontSize(keyName) {
     }
 }
 
-UiRegisterHandCursor(ctrl) {
-    global UiTheme__HandCursorHwnds
-    if !IsObject(ctrl) {
-        return
+UiHoverSnapshot(force := false) {
+    global UiTheme__HoverState
+    tickNow := A_TickCount
+    if !force && UiTheme__HoverState["tick"] = tickNow {
+        return UiTheme__HoverState
     }
-    try hw := ctrl.Hwnd
-    catch {
-        return
+    winHwnd := 0
+    ctrlHwnd := 0
+    MouseGetPos(&_mx, &_my, &winHwnd, &ctrlHwnd, 2)
+    hwUnder := ctrlHwnd ? ctrlHwnd : winHwnd
+    rootHwnd := 0
+    if winHwnd {
+        rootHwnd := DllCall("user32\GetAncestor", "ptr", winHwnd, "uint", 2, "ptr")
+        if !rootHwnd {
+            rootHwnd := winHwnd
+        }
     }
-    if !hw {
-        return
-    }
-    rootHwnd := DllCall("user32\GetAncestor", "ptr", hw, "uint", 2, "ptr")
-    UiTheme__HandCursorHwnds[hw] := rootHwnd ? rootHwnd : hw
+    UiTheme__HoverState["tick"] := tickNow
+    UiTheme__HoverState["hwnd"] := hwUnder
+    UiTheme__HoverState["windowHwnd"] := winHwnd
+    UiTheme__HoverState["controlHwnd"] := ctrlHwnd
+    UiTheme__HoverState["rootHwnd"] := rootHwnd
+    UiTheme__HoverState["leftButtonDown"] := !!GetKeyState("LButton", "P")
+    return UiTheme__HoverState
 }
 
-UiTheme__OnSetCursor(wParam, lParam, msg, hwnd) {
-    global UiTheme__HandCursorHwnds, UiTheme__HandCursorHandle
-    currentRoot := DllCall("user32\GetAncestor", "ptr", hwnd, "uint", 2, "ptr")
-    if !currentRoot {
-        currentRoot := hwnd
+UiInstallBlankClickBlur(gui, onBlur := "") {
+    global UiBlankClickBlur__Entries, UiBlankClickBlur__OnMessageInstalled
+    if !IsObject(gui) {
+        return ""
     }
-    pt := Buffer(8, 0)
-    if !DllCall("user32\GetCursorPos", "ptr", pt) {
+    for entry in UiBlankClickBlur__Entries {
+        if (entry["guiHwnd"] = gui.Hwnd) {
+            return entry["sink"]
+        }
+    }
+    sinkName := "__UiBlankFocusSink" gui.Hwnd
+    sink := gui.Add("Button", "v" sinkName " x-2000 y-2000 w1 h1")
+    try sink.Opt("-TabStop")
+    entry := Map("guiHwnd", gui.Hwnd, "sink", sink, "onBlur", onBlur)
+    UiBlankClickBlur__Entries.Push(entry)
+    if !UiBlankClickBlur__OnMessageInstalled {
+        OnMessage(0x0201, UiBlankClickBlur_OnLButtonDown)
+        UiBlankClickBlur__OnMessageInstalled := true
+    }
+    return sink
+}
+
+UiBlankClickBlur_OnLButtonDown(wParam, lParam, msg, hwnd) {
+    global UiBlankClickBlur__Entries
+    if !hwnd {
         return
     }
-    px := NumGet(pt, 0, "int")
-    py := NumGet(pt, 4, "int")
-    rc := Buffer(16, 0)
-    for handHwnd, rootHwnd in UiTheme__HandCursorHwnds {
-        if (rootHwnd != currentRoot) {
+    for entry in UiBlankClickBlur__Entries {
+        if (entry["guiHwnd"] != hwnd) {
             continue
         }
-        if !DllCall("user32\GetWindowRect", "ptr", handHwnd, "ptr", rc) {
-            continue
+        sink := entry["sink"]
+        if !IsObject(sink) {
+            return
         }
-        left := NumGet(rc, 0, "int")
-        top := NumGet(rc, 4, "int")
-        right := NumGet(rc, 8, "int")
-        bottom := NumGet(rc, 12, "int")
-        if (px >= left && px < right && py >= top && py < bottom) {
-            if !UiTheme__HandCursorHandle {
-                UiTheme__HandCursorHandle := DllCall("user32\LoadCursor", "ptr", 0, "ptr", 32649, "ptr")
-            }
-            if UiTheme__HandCursorHandle {
-                DllCall("user32\SetCursor", "ptr", UiTheme__HandCursorHandle)
-                return true
-            }
+        try sink.Focus()
+        callback := entry["onBlur"]
+        if IsObject(callback) {
+            try callback.Call()
         }
+        return
     }
 }

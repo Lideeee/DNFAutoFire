@@ -2,6 +2,7 @@
 
 class GdipUiHelpers {
     static PixelFormat32bppARGB := 0x26200A
+    static _bitmapCache := Map()
 
     static HexRgbToARGB(hex6, alpha := 0xFF) {
         s := StrReplace(hex6, "#", "")
@@ -100,73 +101,151 @@ class GdipUiHelpers {
         }
     }
 
+    static CloneBitmapHandle(hbm) {
+        if !hbm {
+            return 0
+        }
+        return DllCall("user32\CopyImage", "ptr", hbm, "uint", 0, "int", 0, "int", 0, "uint", 0, "ptr")
+    }
+
     static RenderKeycapBitmap(w, h, text, visualState, renderState, textSizePx, bold := false, keyName := "", showHint := false) {
+        cacheKey := "keycap|" w "|" h "|" visualState "|" renderState "|" keyName "|" (showHint ? 1 : 0)
+        if this._bitmapCache.Has(cacheKey) {
+            hbm := this.CloneBitmapHandle(this._bitmapCache[cacheKey])
+            if hbm {
+                return hbm
+            }
+        }
+        hbm := this._RenderKeycapBitmapUncached(w, h, text, visualState, renderState, textSizePx, bold, keyName, showHint)
+        if !hbm {
+            return 0
+        }
+        cloned := this.CloneBitmapHandle(hbm)
+        if cloned {
+            this._bitmapCache[cacheKey] := hbm
+            return cloned
+        }
+        return hbm
+    }
+
+    static _RenderKeycapBitmapUncached(w, h, text, visualState, renderState, textSizePx, bold := false, keyName := "", showHint := false) {
         GdiPlusSession.EnsureStarted()
-        pBitmap := 0
-        stride := ((w * 4 + 3) // 4) * 4
-        if DllCall("gdiplus\GdipCreateBitmapFromScan0", "int", w, "int", h, "int", stride, "int", this.PixelFormat32bppARGB, "ptr", 0, "ptr*", &pBitmap := 0) != 0 || !pBitmap {
+        scale := this._KeycapRenderScale(keyName)
+        sw := w * scale
+        sh := h * scale
+        pSrcBitmap := 0
+        srcStride := ((sw * 4 + 3) // 4) * 4
+        if DllCall("gdiplus\GdipCreateBitmapFromScan0", "int", sw, "int", sh, "int", srcStride, "int", this.PixelFormat32bppARGB, "ptr", 0, "ptr*", &pSrcBitmap := 0) != 0 || !pSrcBitmap {
             return 0
         }
         try {
-            gr := 0
-            if DllCall("gdiplus\GdipGetImageGraphicsContext", "ptr", pBitmap, "ptr*", &gr := 0) != 0 || !gr {
+            srcGr := 0
+            if DllCall("gdiplus\GdipGetImageGraphicsContext", "ptr", pSrcBitmap, "ptr*", &srcGr := 0) != 0 || !srcGr {
                 return 0
             }
             try {
-                DllCall("gdiplus\GdipSetSmoothingMode", "ptr", gr, "int", 4)
-                DllCall("gdiplus\GdipGraphicsClear", "ptr", gr, "uint", 0)
-                this._PaintKeycap(gr, w, h, visualState, renderState, keyName, showHint)
+                DllCall("gdiplus\GdipSetSmoothingMode", "ptr", srcGr, "int", 4)
+                DllCall("gdiplus\GdipSetPixelOffsetMode", "ptr", srcGr, "int", 4)
+                DllCall("gdiplus\GdipSetCompositingQuality", "ptr", srcGr, "int", 4)
+                DllCall("gdiplus\GdipGraphicsClear", "ptr", srcGr, "uint", 0)
+                this._PaintKeycap(srcGr, sw, sh, visualState, renderState, keyName, showHint, scale)
             } finally {
-                DllCall("gdiplus\GdipDeleteGraphics", "ptr", gr)
+                DllCall("gdiplus\GdipDeleteGraphics", "ptr", srcGr)
             }
-            return this.BitmapToHBITMAP(pBitmap)
+
+            pBitmap := 0
+            stride := ((w * 4 + 3) // 4) * 4
+            if DllCall("gdiplus\GdipCreateBitmapFromScan0", "int", w, "int", h, "int", stride, "int", this.PixelFormat32bppARGB, "ptr", 0, "ptr*", &pBitmap := 0) != 0 || !pBitmap {
+                return 0
+            }
+            try {
+                gr := 0
+                if DllCall("gdiplus\GdipGetImageGraphicsContext", "ptr", pBitmap, "ptr*", &gr := 0) != 0 || !gr {
+                    return 0
+                }
+                try {
+                    DllCall("gdiplus\GdipSetSmoothingMode", "ptr", gr, "int", 4)
+                    DllCall("gdiplus\GdipSetPixelOffsetMode", "ptr", gr, "int", 4)
+                    DllCall("gdiplus\GdipSetCompositingQuality", "ptr", gr, "int", 4)
+                    DllCall("gdiplus\GdipSetInterpolationMode", "ptr", gr, "int", this._KeycapInterpolationMode(keyName))
+                    DllCall("gdiplus\GdipGraphicsClear", "ptr", gr, "uint", 0)
+                    DllCall("gdiplus\GdipDrawImageRectRectI", "ptr", gr, "ptr", pSrcBitmap, "int", 0, "int", 0, "int", w, "int", h, "int", 0, "int", 0, "int", sw, "int", sh, "int", 2, "ptr", 0, "ptr", 0, "ptr", 0)
+                } finally {
+                    DllCall("gdiplus\GdipDeleteGraphics", "ptr", gr)
+                }
+                return this.BitmapToHBITMAP(pBitmap)
+            } finally {
+                DllCall("gdiplus\GdipDisposeImage", "ptr", pBitmap)
+            }
         } finally {
-            DllCall("gdiplus\GdipDisposeImage", "ptr", pBitmap)
+            DllCall("gdiplus\GdipDisposeImage", "ptr", pSrcBitmap)
         }
     }
 
-    static _PaintKeycap(gr, w, h, visualState, renderState, keyName := "", showHint := false) {
+    static _KeycapRenderScale(keyName := "") {
+        switch keyName {
+            case "Up", "Down", "Left", "Right":
+                return 4
+            default:
+                return 2
+        }
+    }
+
+    static _KeycapInterpolationMode(keyName := "") {
+        switch keyName {
+            case "Up", "Down", "Left", "Right":
+                return 7
+            default:
+                return 7
+        }
+    }
+
+    static _PaintKeycap(gr, w, h, visualState, renderState, keyName := "", showHint := false, unit := 1.0) {
         global UiTheme
-        pad := 1.0
-        rr := 0
+        pad := 1.0 * unit
+        rr := 3.0 * unit
         palette := this._KeycapPalette(visualState)
         bg := this.HexRgbToARGB(palette.bg)
         border := this.HexRgbToARGB(palette.border)
         hint := this.HexRgbToARGB(palette.hint)
+        border := this._BlendArgb(border, bg, 0.58)
         if (renderState = "hover") {
-            bg := this._LightenArgb(bg, 0.02)
-            border := this._DarkenArgb(border, 0.98)
+            border := this.HexRgbToARGB("0078D7")
+            hint := this._BlendArgb(hint, this.HexRgbToARGB("7FAEEA"), 0.48)
         } else if (renderState = "pressed") {
-            bg := this._DarkenArgb(bg, 0.98)
-            border := this._DarkenArgb(border, 0.9)
+            border := this.HexRgbToARGB("2563EB")
+            hint := this._BlendArgb(hint, this.HexRgbToARGB("6F9AE2"), 0.52)
         }
-        this.FillRoundRect(gr, bg, pad, pad, w - 2 * pad, h - 2 * pad, rr)
-        this.StrokeRoundRect(gr, border, pad, pad, w - 2 * pad, h - 2 * pad, rr, 1)
-        this._DrawKeycapHint(gr, showHint, hint, w, h, pad)
+        fillInset := 1.9 * unit
+        strokeInset := 1.78 * unit
+        strokeW := 0.22 * unit
+        this.FillRoundRect(gr, bg, pad + fillInset, pad + fillInset, w - 2 * (pad + fillInset), h - 2 * (pad + fillInset), Max(0, rr - fillInset / 2))
+        this.StrokeRoundRect(gr, border, pad + strokeInset, pad + strokeInset, w - 2 * (pad + strokeInset), h - 2 * (pad + strokeInset), Max(0, rr - strokeInset / 2), strokeW)
+        this._DrawKeycapHint(gr, showHint, hint, w, h, pad, unit)
         if (keyName = "Win") {
-            this._DrawWindowsGlyph(gr, palette.text, w, h)
+            this._DrawWindowsGlyph(gr, palette.text, w, h, unit)
         } else if (keyName = "Up" || keyName = "Down" || keyName = "Left" || keyName = "Right") {
-            this._DrawArrowGlyph(gr, palette.text, w, h, keyName)
+            this._DrawArrowGlyph(gr, palette.text, w, h, keyName, unit)
         }
     }
 
-    static _DrawKeycapHint(gr, showHint, hintArgb, w, h, pad) {
+    static _DrawKeycapHint(gr, showHint, hintArgb, w, h, pad, unit := 1.0) {
         if !showHint {
             return
         }
-        lineW := 8
-        lineH := 2
-        inset := 4
+        lineW := 8 * unit
+        lineH := 2 * unit
+        inset := 4 * unit
         x := w - pad - inset - lineW
         y := pad + inset
-        this.FillRoundRect(gr, hintArgb, x, y, lineW, lineH, 0)
+        this.FillRoundRect(gr, hintArgb, x, y, lineW, lineH, lineH / 2)
     }
 
-    static _DrawWindowsGlyph(gr, colorHex, w, h) {
+    static _DrawWindowsGlyph(gr, colorHex, w, h, unit := 1.0) {
         argb := this.HexRgbToARGB(colorHex)
-        glyphW := 16
-        glyphH := 16
-        gap := 2
+        glyphW := 16 * unit
+        glyphH := 16 * unit
+        gap := 2 * unit
         paneW := Floor((glyphW - gap) / 2)
         paneH := Floor((glyphH - gap) / 2)
         startX := Floor((w - glyphW) / 2)
@@ -177,26 +256,34 @@ class GdipUiHelpers {
         this.FillRoundRect(gr, argb, startX + paneW + gap, startY + paneH + gap, paneW, paneH, 0)
     }
 
-    static _DrawArrowGlyph(gr, colorHex, w, h, direction) {
+    static _DrawArrowGlyph(gr, colorHex, w, h, direction, unit := 1.0) {
         argb := this.HexRgbToARGB(colorHex)
-        cx := w / 2.0 - 4
-        cy := h / 2.0 - 2
-        head := 3
-        shaftW := 1
-        shaftLen := 9
+        cx := Floor(w / 2.0)
+        cy := Floor(h / 2.0)
+        head := Round(3 * unit)
+        shaftW := Max(1, Round(1 * unit))
+        shaftLen := Round(9 * unit)
         switch direction {
             case "Up":
-                this.FillRoundRect(gr, argb, cx - shaftW / 2, cy - 1, shaftW, shaftLen, 0)
-                pts := [[cx, cy - head - 2], [cx + head, cy + 1], [cx - head, cy + 1]]
+                shaftX := cx - Floor(shaftW / 2)
+                shaftTop := cy - Round(1 * unit)
+                this.FillRoundRect(gr, argb, shaftX, shaftTop, shaftW, shaftLen, 0)
+                pts := [[cx, cy - head - Round(2 * unit)], [cx + head, cy + Round(1 * unit)], [cx - head, cy + Round(1 * unit)]]
             case "Down":
-                this.FillRoundRect(gr, argb, cx - shaftW / 2, cy - shaftLen + 1, shaftW, shaftLen, 0)
-                pts := [[cx - head, cy - 1], [cx + head, cy - 1], [cx, cy + head + 2]]
+                shaftX := cx - Floor(shaftW / 2)
+                shaftTop := cy - shaftLen + Round(1 * unit)
+                this.FillRoundRect(gr, argb, shaftX, shaftTop, shaftW, shaftLen, 0)
+                pts := [[cx - head, cy - Round(1 * unit)], [cx + head, cy - Round(1 * unit)], [cx, cy + head + Round(2 * unit)]]
             case "Left":
-                this.FillRoundRect(gr, argb, cx - 1, cy - shaftW / 2, shaftLen, shaftW, 0)
-                pts := [[cx - head - 2, cy], [cx + 1, cy - head], [cx + 1, cy + head]]
+                shaftY := cy - Floor(shaftW / 2)
+                shaftLeft := cx - Round(1 * unit)
+                this.FillRoundRect(gr, argb, shaftLeft, shaftY, shaftLen, shaftW, 0)
+                pts := [[cx - head - Round(2 * unit), cy], [cx + Round(1 * unit), cy - head], [cx + Round(1 * unit), cy + head]]
             default:
-                this.FillRoundRect(gr, argb, cx - shaftLen + 1, cy - shaftW / 2, shaftLen, shaftW, 0)
-                pts := [[cx - 1, cy - head], [cx + head + 2, cy], [cx - 1, cy + head]]
+                shaftY := cy - Floor(shaftW / 2)
+                shaftLeft := cx - shaftLen + Round(1 * unit)
+                this.FillRoundRect(gr, argb, shaftLeft, shaftY, shaftLen, shaftW, 0)
+                pts := [[cx - Round(1 * unit), cy - head], [cx + head + Round(2 * unit), cy], [cx - Round(1 * unit), cy + head]]
         }
         this.FillPolygon(gr, argb, pts)
     }
@@ -234,39 +321,178 @@ class GdipUiHelpers {
         return (a << 24) | (r << 16) | (g << 8) | b
     }
 
-    static RenderToggleBitmap(w, h, on) {
+    static RenderToggleBitmap(w, h, progress, renderState := "normal") {
+        step := Round(Max(0, Min(1, progress)) * 8)
+        cacheKey := "toggle|" w "|" h "|" step "|" renderState
+        if this._bitmapCache.Has(cacheKey) {
+            hbm := this.CloneBitmapHandle(this._bitmapCache[cacheKey])
+            if hbm {
+                return hbm
+            }
+        }
+        hbm := this._RenderToggleBitmapUncached(w, h, step / 8.0, renderState)
+        if !hbm {
+            return 0
+        }
+        cloned := this.CloneBitmapHandle(hbm)
+        if cloned {
+            this._bitmapCache[cacheKey] := hbm
+            return cloned
+        }
+        return hbm
+    }
+
+    static _RenderToggleBitmapUncached(w, h, progress, renderState := "normal") {
         GdiPlusSession.EnsureStarted()
         global UiTheme
-        pBitmap := 0
-        stride := ((w * 4 + 3) // 4) * 4
-        if DllCall("gdiplus\GdipCreateBitmapFromScan0", "int", w, "int", h, "int", stride, "int", this.PixelFormat32bppARGB, "ptr", 0, "ptr*", &pBitmap := 0) != 0 || !pBitmap {
+        scale := 4
+        sw := w * scale
+        sh := h * scale
+        pSrcBitmap := 0
+        srcStride := ((sw * 4 + 3) // 4) * 4
+        if DllCall("gdiplus\GdipCreateBitmapFromScan0", "int", sw, "int", sh, "int", srcStride, "int", this.PixelFormat32bppARGB, "ptr", 0, "ptr*", &pSrcBitmap := 0) != 0 || !pSrcBitmap {
             return 0
         }
         try {
-            gr := 0
-            if DllCall("gdiplus\GdipGetImageGraphicsContext", "ptr", pBitmap, "ptr*", &gr := 0) != 0 || !gr {
+            srcGr := 0
+            if DllCall("gdiplus\GdipGetImageGraphicsContext", "ptr", pSrcBitmap, "ptr*", &srcGr := 0) != 0 || !srcGr {
                 return 0
             }
             try {
-                DllCall("gdiplus\GdipSetSmoothingMode", "ptr", gr, "int", 4)
-                DllCall("gdiplus\GdipGraphicsClear", "ptr", gr, "uint", 0)
-                th := h - 2
-                tw := w - 2
-                trackArgb := on ? this.HexRgbToARGB(UiTheme["SwitchTrackOn"]) : this.HexRgbToARGB(UiTheme["KeyCellBg"])
-                this.FillRoundRect(gr, trackArgb, 1, 1, tw, th, th / 2)
-                this.StrokeRoundRect(gr, 0x22000000, 1, 1, tw, th, th / 2, 1)
-                ks := th - 4
-                kx := on ? (1 + tw - ks - 2) : 3
-                ky := 3
-                knobFill := this.HexRgbToARGB("FFFFFF")
-                this.FillRoundRect(gr, knobFill, kx, ky, ks, ks, ks / 2)
-                this.StrokeRoundRect(gr, 0x22000000, kx, ky, ks, ks, ks / 2, 1)
+                DllCall("gdiplus\GdipSetSmoothingMode", "ptr", srcGr, "int", 4)
+                DllCall("gdiplus\GdipSetPixelOffsetMode", "ptr", srcGr, "int", 4)
+                DllCall("gdiplus\GdipSetCompositingQuality", "ptr", srcGr, "int", 4)
+                DllCall("gdiplus\GdipGraphicsClear", "ptr", srcGr, "uint", 0)
+                this._PaintToggle(srcGr, sw, sh, progress, renderState, scale)
             } finally {
-                DllCall("gdiplus\GdipDeleteGraphics", "ptr", gr)
+                DllCall("gdiplus\GdipDeleteGraphics", "ptr", srcGr)
             }
-            return this.BitmapToHBITMAP(pBitmap)
+
+            pBitmap := 0
+            stride := ((w * 4 + 3) // 4) * 4
+            if DllCall("gdiplus\GdipCreateBitmapFromScan0", "int", w, "int", h, "int", stride, "int", this.PixelFormat32bppARGB, "ptr", 0, "ptr*", &pBitmap := 0) != 0 || !pBitmap {
+                return 0
+            }
+            try {
+                gr := 0
+                if DllCall("gdiplus\GdipGetImageGraphicsContext", "ptr", pBitmap, "ptr*", &gr := 0) != 0 || !gr {
+                    return 0
+                }
+                try {
+                    DllCall("gdiplus\GdipSetSmoothingMode", "ptr", gr, "int", 4)
+                    DllCall("gdiplus\GdipSetPixelOffsetMode", "ptr", gr, "int", 4)
+                    DllCall("gdiplus\GdipSetCompositingQuality", "ptr", gr, "int", 4)
+                    DllCall("gdiplus\GdipSetInterpolationMode", "ptr", gr, "int", 7)
+                    DllCall("gdiplus\GdipGraphicsClear", "ptr", gr, "uint", 0)
+                    DllCall("gdiplus\GdipDrawImageRectRectI"
+                        , "ptr", gr
+                        , "ptr", pSrcBitmap
+                        , "int", 0, "int", 0, "int", w, "int", h
+                        , "int", 0, "int", 0, "int", sw, "int", sh
+                        , "int", 2
+                        , "ptr", 0, "ptr", 0, "ptr", 0)
+                } finally {
+                    DllCall("gdiplus\GdipDeleteGraphics", "ptr", gr)
+                }
+                return this.BitmapToHBITMAP(pBitmap)
+            } finally {
+                DllCall("gdiplus\GdipDisposeImage", "ptr", pBitmap)
+            }
         } finally {
-            DllCall("gdiplus\GdipDisposeImage", "ptr", pBitmap)
+            DllCall("gdiplus\GdipDisposeImage", "ptr", pSrcBitmap)
         }
+    }
+
+    static _PaintToggle(gr, w, h, progress, renderState := "normal", unit := 1.0) {
+        global UiTheme
+        pad := 1.0 * unit
+        trackW := w - 2 * pad
+        trackH := h - 2 * pad
+        radius := trackH / 2
+
+        offColor := this._ToggleStateColor("off", renderState)
+        onColor := this._ToggleStateColor("on", renderState)
+        borderColor := this._ToggleBorderColor(progress, renderState)
+        thumbColor := renderState = "pressed"
+            ? this.HexRgbToARGB(UiTheme["SwitchThumbPressed"])
+            : this.HexRgbToARGB(UiTheme["SwitchThumb"])
+
+        shellInset := 0.6 * unit
+        innerInset := 1.45 * unit
+        shellRadius := Max(0, radius - shellInset / 2)
+        innerRadius := Max(0, radius - innerInset)
+        trackArgb := this._BlendArgb(offColor, onColor, progress)
+        this.FillRoundRect(gr, borderColor, pad + shellInset, pad + shellInset, trackW - shellInset * 2, trackH - shellInset * 2, shellRadius)
+        this.FillRoundRect(gr, trackArgb, pad + innerInset, pad + innerInset, trackW - innerInset * 2, trackH - innerInset * 2, innerRadius)
+
+        knobInset := 3.0 * unit
+        knobBaseSize := trackH - knobInset * 2 + 1.4 * unit
+        knobGrow := 0.0
+        if (renderState = "hover") {
+            knobGrow := 1.1 * unit
+        } else if (renderState = "pressed") {
+            knobGrow := 0.8 * unit
+        }
+        knobSize := knobBaseSize + knobGrow
+        knobTravel := trackW - knobSize - knobInset * 2
+        knobX := pad + knobInset + knobTravel * progress
+        knobY := pad + (trackH - knobSize) / 2
+        if (renderState = "pressed") {
+            knobX += progress >= 0.5 ? 0.35 * unit : -0.35 * unit
+        }
+        if (renderState = "hover") {
+            knobY -= 0.1 * unit
+        }
+        thumbShade := renderState = "pressed" ? 0x12000000 : 0x0A000000
+        shadowOffset := renderState = "pressed" ? 0.3 * unit : 0.55 * unit
+        this.FillRoundRect(gr, thumbShade, knobX + shadowOffset, knobY + shadowOffset, knobSize - shadowOffset * 1.6, knobSize - shadowOffset * 1.2, Max(0, knobSize / 2 - shadowOffset))
+        this.FillRoundRect(gr, thumbColor, knobX, knobY, knobSize, knobSize, knobSize / 2)
+    }
+
+    static _ToggleStateColor(kind, renderState := "normal") {
+        global UiTheme
+        if (kind = "on") {
+            switch renderState {
+                case "hover":
+                    return this.HexRgbToARGB(UiTheme["SwitchTrackOnHover"])
+                case "pressed":
+                    return this.HexRgbToARGB(UiTheme["SwitchTrackOnPressed"])
+                default:
+                    return this.HexRgbToARGB(UiTheme["SwitchTrackOn"])
+            }
+        }
+        switch renderState {
+            case "hover":
+                return this.HexRgbToARGB(UiTheme["SwitchTrackOffHover"])
+            case "pressed":
+                return this.HexRgbToARGB(UiTheme["SwitchTrackOffPressed"])
+            default:
+                return this.HexRgbToARGB(UiTheme["SwitchTrackOff"])
+        }
+    }
+
+    static _ToggleBorderColor(progress, renderState := "normal") {
+        global UiTheme
+        offBorder := this.HexRgbToARGB(UiTheme["SwitchBorder"])
+        onBorder := this.HexRgbToARGB(UiTheme["SwitchBorderOn"])
+        mixed := this._BlendArgb(offBorder, onBorder, progress)
+        if (renderState = "hover") {
+            return this._LightenArgb(mixed, 0.08)
+        }
+        if (renderState = "pressed") {
+            return this._DarkenArgb(mixed, 0.92)
+        }
+        return mixed
+    }
+
+    static _BlendArgb(fromArgb, toArgb, progress) {
+        p := Max(0, Min(1, progress))
+        a0 := (fromArgb >> 24) & 0xFF, r0 := (fromArgb >> 16) & 0xFF, g0 := (fromArgb >> 8) & 0xFF, b0 := fromArgb & 0xFF
+        a1 := (toArgb >> 24) & 0xFF, r1 := (toArgb >> 16) & 0xFF, g1 := (toArgb >> 8) & 0xFF, b1 := toArgb & 0xFF
+        a := Round(a0 + (a1 - a0) * p)
+        r := Round(r0 + (r1 - r0) * p)
+        g := Round(g0 + (g1 - g0) * p)
+        b := Round(b0 + (b1 - b0) * p)
+        return (a << 24) | (r << 16) | (g << 8) | b
     }
 }
