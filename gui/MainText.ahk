@@ -57,6 +57,7 @@ global MainText := Map(
     "SettingOnSystemStart", "开机后自动启动",
     "SettingBlockWin", "游戏内屏蔽Win键",
     "SettingSubprocessErrorLog", "子进程异常错误日志",
+    "SettingCloseToTray", "关闭按钮最小化到托盘",
     "Save", "保存",
     "SettingHelp", "如何使用DAF连发工具`n`n1、点击窗口中的键盘，将想启动连发的键位变成蓝色色`n2、在左侧列表单击切换配置，需要时可新建空配置、重命名或克隆当前配置`n3、点击启动连发，即可使用`n`nPS：主界面改动会在切换配置、启动连发或关闭主窗口前自动保存到当前配置。扩展功能窗口点击保存、按ESC或点右上角关闭时，也会自动保存当前修改。游戏中也可以打开快速切换窗口，使用上下键和回车可以快速切换配置，记得设置快捷键哦`n默认快捷键 Alt + `` （键盘1左边，Tab上边的那个）",
     "AboutCredits", "作者： 某亚瑟`n图标： Ousumu",

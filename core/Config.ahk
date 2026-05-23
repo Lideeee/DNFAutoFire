@@ -245,6 +245,7 @@ _CreateDefaultConfigIni() {
     SaveConfig("SettingOnSystemStart", false)
     SaveConfig("SettingBlockWin", false)
     SaveConfig("SettingSubprocessErrorLog", false)
+    SaveConfig("SettingCloseToTray", false)
     SaveLastPreset(DEFAULT_PRESET_NAME)
     CreateBlankPreset(DEFAULT_PRESET_NAME)
 }

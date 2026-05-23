@@ -14,6 +14,7 @@ gSettingCtrls["SettingAutoStart"] := gSettingGui.Add("CheckBox", "vSettingAutoSt
 gSettingCtrls["SettingOnSystemStart"] := gSettingGui.Add("CheckBox", "vSettingOnSystemStart x16 y54 h20", MainText["SettingOnSystemStart"])
 gSettingCtrls["SettingBlockWin"] := gSettingGui.Add("CheckBox", "vSettingBlockWin x16 y76 h20", MainText["SettingBlockWin"])
 gSettingCtrls["SettingSubprocessErrorLog"] := gSettingGui.Add("CheckBox", "vSettingSubprocessErrorLog x16 y98 h20", MainText["SettingSubprocessErrorLog"])
+gSettingCtrls["SettingCloseToTray"] := gSettingGui.Add("CheckBox", "vSettingCloseToTray x16 y120 h20", MainText["SettingCloseToTray"])
 gSettingGui.Add("Button", "x310 y250 w80 h40", MainText["Save"]).OnEvent("Click", SettingSave)
 gSettingCtrls["Tab"].UseTab(MainText["SettingTabHelp"])
 gSettingGui.Add("Text", "x16 y32 w368 h268", MainText["SettingHelp"])
@@ -55,19 +56,22 @@ HideGuiSetting() {
 }
 
 SettingSave(*) {
-    global _OnSystemStart, _BlockWin
+    global _OnSystemStart, _BlockWin, _CloseToTray
     settingAutoStart := SettingGetCtrl("SettingAutoStart").Value
     settingOnSystemStart := SettingGetCtrl("SettingOnSystemStart").Value
     settingBlockWin := SettingGetCtrl("SettingBlockWin").Value
     settingSubprocessErrorLog := SettingGetCtrl("SettingSubprocessErrorLog").Value
+    settingCloseToTray := SettingGetCtrl("SettingCloseToTray").Value
 
     SaveConfig("SettingAutoStart", settingAutoStart)
     SaveConfig("SettingOnSystemStart", settingOnSystemStart)
     SaveConfig("SettingBlockWin", settingBlockWin)
     SaveConfig("SettingSubprocessErrorLog", settingSubprocessErrorLog)
+    SaveConfig("SettingCloseToTray", settingCloseToTray)
 
     _OnSystemStart := settingOnSystemStart
     _BlockWin := settingBlockWin
+    _CloseToTray := settingCloseToTray
 
     SettingNow()
     HideGuiSetting()
@@ -78,6 +82,7 @@ SettingLoad() {
     SettingGetCtrl("SettingOnSystemStart").Value := LoadConfig("SettingOnSystemStart", false)
     SettingGetCtrl("SettingBlockWin").Value := LoadConfig("SettingBlockWin", false)
     SettingGetCtrl("SettingSubprocessErrorLog").Value := LoadConfig("SettingSubprocessErrorLog", false)
+    SettingGetCtrl("SettingCloseToTray").Value := LoadConfig("SettingCloseToTray", false)
 }
 
 SettingNow() {
@@ -101,6 +106,7 @@ BlockWin(*) {
 global _AutoStart := LoadConfig("SettingAutoStart", false)
 global _OnSystemStart := LoadConfig("SettingOnSystemStart", false)
 global _BlockWin := LoadConfig("SettingBlockWin", false)
+global _CloseToTray := LoadConfig("SettingCloseToTray", false)
 
 if (_BlockWin) {
     Hotkey("$*LWin", BlockWin, "On")

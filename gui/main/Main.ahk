@@ -252,7 +252,12 @@ MainGuiEscape(*) {
 }
 
 MainGuiClose(*) {
+    global _CloseToTray
     SaveCurrentPresetState()
+    if (_CloseToTray) {
+        HideGuiMain()
+        return true
+    }
     ExitApp()
 }
 
