@@ -150,9 +150,10 @@ ComboSerializeProfiles(profiles) {
         }
         trig := p.trigger
         loopOn := p.loop ? "1" : "0"
+        blockOriginal := (HasProp(p, "blockOriginal") && p.blockOriginal) ? "1" : "0"
         skills := IsObject(p.skills) ? p.skills : []
         skillsStr := ComboSerializeSkills(skills)
-        rec := trig us loopOn us skillsStr
+        rec := trig us loopOn us blockOriginal us skillsStr
         if (out != "") {
             out .= rs
         }
@@ -174,14 +175,21 @@ ComboParseProfiles(raw) {
         if (rec = "") {
             continue
         }
-        parts := StrSplit(rec, us,, 3)
+        parts := StrSplit(rec, us,, 4)
         if (parts.Length < 2) {
             continue
         }
         trigger := ComboCanonMainKey(Trim(parts[1]))
         loopOn := (parts.Length >= 2 && Trim(parts[2]) = "1")
-        skillsRaw := parts.Length >= 3 ? parts[3] : ""
-        out.Push({ trigger: trigger, loop: loopOn, skills: ComboParseSkills(skillsRaw) })
+        blockOriginal := false
+        skillsRaw := ""
+        if (parts.Length >= 4) {
+            blockOriginal := Trim(parts[3]) = "1"
+            skillsRaw := parts[4]
+        } else {
+            skillsRaw := parts.Length >= 3 ? parts[3] : ""
+        }
+        out.Push({ trigger: trigger, loop: loopOn, blockOriginal: blockOriginal, skills: ComboParseSkills(skillsRaw) })
     }
     return out
 }
@@ -194,5 +202,5 @@ ComboLoadProfilesFromPreset(presetName) {
     trigger := ComboCanonMainKey(ComboPreset_LoadField(presetName, "ComboTriggerKey"))
     skills := ComboParseSkills(ComboPreset_LoadField(presetName, "ComboSkills"))
     loopOn := LoadPreset(presetName, "ComboLoopMode", false)
-    return [{ trigger: trigger, loop: loopOn, skills: skills }]
+    return [{ trigger: trigger, loop: loopOn, blockOriginal: false, skills: skills }]
 }

@@ -44,7 +44,8 @@ UiPlainButton(gComboGui, skillActionRects[2], exText["ComboDeleteSkill"], ComboD
 
 UiLabel(gComboGui, UiLayoutRect(gComboLayout, skillColX, 334, 44, 22, "+0x200"), exText["ComboTriggerKey"])
 UiPressKeyEdit(gComboCtrls, gComboGui, "ComboTriggerKey", UiLayoutRect(gComboLayout, 276, 332, 232, 24), ComboCanonMainPressKeyCaptured)
-gComboCtrls["ComboLoopMode"] := gComboGui.Add("CheckBox", UiLayoutRect(gComboLayout, contentRight - 80, 334, 80, 22, "vComboLoopMode"), exText["ComboLoopMode"])
+gComboCtrls["ComboLoopMode"] := gComboGui.Add("CheckBox", UiLayoutRect(gComboLayout, 516, 334, 58, 22, "vComboLoopMode"), exText["ComboLoopMode"])
+gComboCtrls["ComboBlockOriginal"] := gComboGui.Add("CheckBox", UiLayoutRect(gComboLayout, 276, 362, 116, 22, "vComboBlockOriginal"), exText["ComboBlockOriginal"])
 
 UiButton(gComboCtrls, gComboGui, "ComboApply", bottomBtnRects[1], exText["ComboApply"], ComboApplyProfile, "secondary")
 UiButton(gComboCtrls, gComboGui, "ComboSaveClose", bottomBtnRects[2], exText["ComboSaveClose"], ComboSaveAndClose, "primary")
@@ -213,6 +214,7 @@ ComboFlushEditorToProfileAt(idx) {
     p := __ComboProfiles[idx]
     p.trigger := UiPressKeyEdit_Value(ComboGetCtrl("ComboTriggerKey"))
     p.loop := ComboGetCtrl("ComboLoopMode").Value
+    p.blockOriginal := ComboGetCtrl("ComboBlockOriginal").Value
     p.skills := ComboCloneSkillItems(__ComboSkillItems)
 }
 
@@ -226,6 +228,7 @@ ComboLoadProfileToEditor(idx) {
     ComboRefreshList()
     ComboGetCtrl("ComboTriggerKey").Text := p.trigger
     ComboGetCtrl("ComboLoopMode").Value := p.loop
+    ComboGetCtrl("ComboBlockOriginal").Value := HasProp(p, "blockOriginal") ? p.blockOriginal : false
 }
 
 ComboRefreshProfileList() {
@@ -337,7 +340,7 @@ ComboAddProfile(*) {
         MsgBox(exText["ComboMaxProfilesPrefix"] maxCount exText["ComboMaxProfilesSuffix"], exText["ComboTitle"], "Icon!")
         return
     }
-    __ComboProfiles.Push({ trigger: "", loop: false, skills: [] })
+    __ComboProfiles.Push({ trigger: "", loop: false, blockOriginal: false, skills: [] })
     __ComboProfileIndex := __ComboProfiles.Length
     ComboRefreshProfileList()
     ComboLoadProfileToEditor(__ComboProfileIndex)
@@ -412,7 +415,7 @@ ComboLoadConfig() {
     presetName := GetNowSelectPreset()
     __ComboProfiles := ComboLoadProfilesFromPreset(presetName)
     if (__ComboProfiles.Length = 0) {
-        __ComboProfiles.Push({ trigger: "", loop: false, skills: [] })
+        __ComboProfiles.Push({ trigger: "", loop: false, blockOriginal: false, skills: [] })
     }
     __ComboProfileIndex := 1
     ComboRefreshProfileList()

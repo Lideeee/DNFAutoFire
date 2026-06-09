@@ -247,8 +247,7 @@ HideGuiMain(*) {
 }
 
 MainGuiEscape(*) {
-    SaveCurrentPresetState()
-    ExitApp()
+    return MainGuiClose()
 }
 
 MainGuiClose(*) {

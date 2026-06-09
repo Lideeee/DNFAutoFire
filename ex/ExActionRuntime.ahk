@@ -323,9 +323,10 @@ class ExActionRuntime {
             }
             seen[profile.scID] := true
             ctx.comboHotkeyIds.Push(profile.scID)
+            prefix := profile.blockOriginal ? "$" : "~$"
             HotIfWinActive("ahk_group DNF")
-            Hotkey("~$" profile.scID, ObjBindMethod(ExActionRuntime, "ComboDownByScID", profile.scID), "On")
-            Hotkey("~$" profile.scID " up", ObjBindMethod(ExActionRuntime, "ComboUpByScID", profile.scID), "On")
+            Hotkey(prefix profile.scID, ObjBindMethod(ExActionRuntime, "ComboDownByScID", profile.scID), "On")
+            Hotkey(prefix profile.scID " up", ObjBindMethod(ExActionRuntime, "ComboUpByScID", profile.scID), "On")
             HotIf()
         }
     }
@@ -339,6 +340,8 @@ class ExActionRuntime {
         for scID in ctx.comboHotkeyIds {
             try {
                 HotIfWinActive("ahk_group DNF")
+                try Hotkey("$" scID, "Off")
+                try Hotkey("$" scID " up", "Off")
                 try Hotkey("~$" scID, "Off")
                 try Hotkey("~$" scID " up", "Off")
                 HotIf()
@@ -919,6 +922,7 @@ ExAction_BuildComboProfile(profile, mainIntervalMs) {
         scID: scID,
         loop: profile.loop ? true : false,
         breakOnRelease: profile.loop ? true : false,
+        blockOriginal: (HasProp(profile, "blockOriginal") && profile.blockOriginal) ? true : false,
         leadDelayMs: 0,
         mainIntervalMs: mainIntervalMs,
         isHeld: false,
