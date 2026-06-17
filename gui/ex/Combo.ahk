@@ -222,7 +222,12 @@ ComboCloneSkillItems(items) {
         if !IsObject(it) {
             continue
         }
-        out.Push({ key: it.key, delay: it.delay })
+        key := HasProp(it, "key") ? ComboNormalizeStoredKey(it.key) : ""
+        if (key = "") {
+            continue
+        }
+        delay := HasProp(it, "delay") ? ComboNormalizeDelay(it.delay) : 20
+        out.Push({ key: key, delay: delay })
     }
     return out
 }
@@ -247,7 +252,7 @@ ComboFlushEditorToProfileAt(idx) {
         return
     }
     p := __ComboProfiles[idx]
-    p.trigger := UiPressKeyEdit_Value(ComboGetCtrl("ComboTriggerKey"))
+    p.trigger := ComboCanonMainKey(UiPressKeyEdit_Value(ComboGetCtrl("ComboTriggerKey")))
     p.loop := ComboGetCtrl("ComboLoopMode").Value
     p.blockOriginal := ComboGetCtrl("ComboBlockOriginal").Value
     p.leadDelay := ComboNormalizeProfileLeadDelay(p)
@@ -470,8 +475,6 @@ ComboShowImportError(e) {
     code := IsObject(e) ? e.Message : ""
     if (code = "MISSING_SECTION") {
         text := exText["ComboImportMissingSection"]
-    } else if (code = "UNSUPPORTED_VERSION") {
-        text := exText["ComboImportUnsupportedVersion"]
     } else if (code = "EMPTY_PROFILES") {
         text := exText["ComboImportNoValidProfiles"]
     } else if (code = "MISSING_FILE") {

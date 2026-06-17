@@ -94,8 +94,31 @@ ComboExportFileSection() {
     return "DNFAutoFireComboExport"
 }
 
-ComboExportFileVersion() {
-    return "1"
+ComboBlankProfileMarker() {
+    return "blank"
+}
+
+ComboBlankProfile() {
+    return { trigger: "", loop: false, blockOriginal: false, leadDelay: 0, skills: [] }
+}
+
+ComboNormalizeStoredKey(raw) {
+    if (Type(raw) != "String" && Trim(String(raw)) = "0") {
+        return ""
+    }
+    return ComboCanonMainKey(raw)
+}
+
+ComboIsBlankProfile(p) {
+    if !IsObject(p) {
+        return false
+    }
+    trigger := HasProp(p, "trigger") ? ComboNormalizeStoredKey(p.trigger) : ""
+    loopOn := HasProp(p, "loop") && p.loop
+    blockOriginal := HasProp(p, "blockOriginal") && p.blockOriginal
+    leadDelay := HasProp(p, "leadDelay") ? ComboNormalizeLeadDelay(p.leadDelay) : 0
+    skills := (HasProp(p, "skills") && IsObject(p.skills)) ? p.skills : []
+    return trigger = "" && !loopOn && !blockOriginal && leadDelay = 0 && ComboSerializeSkills(skills) = ""
 }
 
 ComboWriteExportFile(filePath, profiles) {
@@ -104,7 +127,6 @@ ComboWriteExportFile(filePath, profiles) {
         throw Error("EMPTY_PATH")
     }
     section := ComboExportFileSection()
-    IniWrite(ComboExportFileVersion(), filePath, section, "Version")
     IniWrite(ComboSerializeProfiles(profiles), filePath, section, "Profiles")
 }
 
@@ -114,14 +136,10 @@ ComboReadExportFile(filePath) {
         throw Error("MISSING_FILE")
     }
     section := ComboExportFileSection()
-    version := Trim(String(IniRead(filePath, section, "Version", "")))
-    if (version = "") {
+    raw := IniRead(filePath, section, "Profiles", "")
+    if (Trim(String(raw)) = "") {
         throw Error("MISSING_SECTION")
     }
-    if (version != ComboExportFileVersion()) {
-        throw Error("UNSUPPORTED_VERSION")
-    }
-    raw := IniRead(filePath, section, "Profiles", "")
     profiles := ComboParseProfiles(raw)
     if (profiles.Length = 0) {
         throw Error("EMPTY_PROFILES")
@@ -142,7 +160,12 @@ ComboSerializeSkills(items) {
         if !IsObject(item) {
             continue
         }
-        data .= item.key "," item.delay "|"
+        key := HasProp(item, "key") ? ComboNormalizeStoredKey(item.key) : ""
+        if (key = "") {
+            continue
+        }
+        delay := HasProp(item, "delay") ? ComboNormalizeDelay(item.delay) : 20
+        data .= key "," delay "|"
     }
     if (StrLen(data) > 0) {
         data := SubStr(data, 1, StrLen(data) - 1)
@@ -186,11 +209,19 @@ ComboSerializeProfiles(profiles) {
         if !IsObject(p) {
             continue
         }
-        trig := p.trigger
-        loopOn := p.loop ? "1" : "0"
+        if ComboIsBlankProfile(p) {
+            rec := ComboBlankProfileMarker()
+            if (out != "") {
+                out .= rs
+            }
+            out .= rec
+            continue
+        }
+        trig := HasProp(p, "trigger") ? ComboNormalizeStoredKey(p.trigger) : ""
+        loopOn := (HasProp(p, "loop") && p.loop) ? "1" : "0"
         blockOriginal := (HasProp(p, "blockOriginal") && p.blockOriginal) ? "1" : "0"
         leadDelay := HasProp(p, "leadDelay") ? ComboNormalizeLeadDelay(p.leadDelay) : 0
-        skills := IsObject(p.skills) ? p.skills : []
+        skills := (HasProp(p, "skills") && IsObject(p.skills)) ? p.skills : []
         skillsStr := ComboSerializeSkills(skills)
         rec := trig us loopOn us blockOriginal us leadDelay us skillsStr
         if (out != "") {
@@ -212,6 +243,10 @@ ComboParseProfiles(raw) {
     for rec in StrSplit(raw, rs) {
         rec := Trim(rec)
         if (rec = "") {
+            continue
+        }
+        if (StrLower(rec) = ComboBlankProfileMarker()) {
+            out.Push(ComboBlankProfile())
             continue
         }
         parts := StrSplit(rec, us,, 5)
@@ -240,11 +275,5 @@ ComboParseProfiles(raw) {
 
 ComboLoadProfilesFromPreset(presetName) {
     raw := ComboPreset_LoadField(presetName, "ComboProfiles")
-    if (raw != "") {
-        return ComboParseProfiles(raw)
-    }
-    trigger := ComboCanonMainKey(ComboPreset_LoadField(presetName, "ComboTriggerKey"))
-    skills := ComboParseSkills(ComboPreset_LoadField(presetName, "ComboSkills"))
-    loopOn := LoadPreset(presetName, "ComboLoopMode", false)
-    return [{ trigger: trigger, loop: loopOn, blockOriginal: false, leadDelay: 0, skills: skills }]
+    return ComboParseProfiles(raw)
 }

@@ -95,7 +95,6 @@ global exText := Map(
     "ComboImportSuccessPrefix", "已导入 ",
     "ComboImportSuccessSuffix", " 套连招方案。",
     "ComboImportMissingSection", "不是有效的一键连招导出文件。",
-    "ComboImportUnsupportedVersion", "该导出文件版本不受当前程序支持。",
     "ComboImportNoValidProfiles", "导出文件中没有可导入的连招方案。",
     "ComboImportMissingFile", "导入文件不存在。",
     "ComboImportFailed", "导入连招方案失败。",
