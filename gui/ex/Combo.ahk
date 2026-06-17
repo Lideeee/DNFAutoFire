@@ -46,7 +46,7 @@ UiListBox(gComboCtrls, gComboGui, "ComboSkillsListBox", UiLayoutRect(gComboLayou
 gComboCtrls["ComboSkillsListBox"].OnEvent("DoubleClick", ComboEditSkill)
 UiListBoxDragSort_Attach(gComboCtrls["ComboSkillsListBox"], ComboDragGetItems, ComboDragRender, ComboDragCommit)
 skillActionRects := UiExSplitButtonRects(gComboLayout, skillColX, 292, skillColW, 8)
-UiPlainButton(gComboGui, skillActionRects[1], exText["ComboAddSkill"], ComboAddSkill)
+gComboCtrls["ComboAddSkillButton"] := UiPlainButton(gComboGui, skillActionRects[1], exText["ComboAddSkill"], ComboAddSkill)
 UiPlainButton(gComboGui, skillActionRects[2], exText["ComboDeleteSkill"], ComboDeleteSkill)
 
 UiLabel(gComboGui, UiLayoutRect(gComboLayout, skillColX, 334, 44, 22, "+0x200"), exText["ComboTriggerKey"])
@@ -164,7 +164,17 @@ ComboRefreshList() {
 
 ComboAddSkill(*) {
     global __ComboSkillItems
-    raw := GetPressKey()
+    btn := ComboGetCtrl("ComboAddSkillButton")
+    if IsObject(btn) {
+        try btn.Text := exText["PressKeyPrompt"]
+    }
+    try {
+        raw := GetPressKey(false)
+    } finally {
+        if IsObject(btn) {
+            try btn.Text := exText["ComboAddSkill"]
+        }
+    }
     key := ComboCanonMainKey(raw)
     if (key = "") {
         if (raw != "") {

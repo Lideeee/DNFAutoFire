@@ -27,6 +27,7 @@ class ExActionRuntime {
         this._ctx := {
             rules: rules,
             actionHotkeyIds: [],
+            actionHeldScIDs: Map(),
             guanYuProfiles: guanYuProfiles,
             comboProfiles: comboProfiles,
             runningComboIdx: 0,
@@ -124,6 +125,7 @@ class ExActionRuntime {
                 try HotIf()
             }
         }
+        ctx.actionHeldScIDs := Map()
         ctx.actionHotkeyIds := []
         ctx.runningComboIdx := 0
         ctx.comboQueue := []
@@ -132,17 +134,26 @@ class ExActionRuntime {
     }
 
     static ActionDownByScID(scID, *) {
-        if !IsObject(this._ctx) || !WinActive("ahk_group DNF") {
+        ctx := this._ctx
+        if !IsObject(ctx) || !WinActive("ahk_group DNF") {
             return
         }
+        if (ctx.actionHeldScIDs.Has(scID) && ctx.actionHeldScIDs[scID]) {
+            return
+        }
+        ctx.actionHeldScIDs[scID] := true
         this.RuleDownByScID(scID)
         this.GuanYuDownByScID(scID)
         this.ComboDownByScID(scID)
     }
 
     static ActionUpByScID(scID, *) {
-        if !IsObject(this._ctx) {
+        ctx := this._ctx
+        if !IsObject(ctx) {
             return
+        }
+        if IsObject(ctx.actionHeldScIDs) {
+            ctx.actionHeldScIDs[scID] := false
         }
         this.RuleUpByScID(scID)
         this.GuanYuUpByScID(scID)
@@ -321,7 +332,10 @@ class ExActionRuntime {
                 profileIdxs.Push(A_Index)
             }
         }
-        if (profileIdxs.Length > 0 && ctx.runningComboIdx = 0) {
+        if (profileIdxs.Length > 0) {
+            if (ctx.runningComboIdx != 0) {
+                this._ComboInterruptForRestart()
+            }
             this._ComboStartQueue(profileIdxs)
         }
     }
@@ -480,6 +494,18 @@ class ExActionRuntime {
         this._ComboFinish()
     }
 
+    static _ComboInterruptForRestart() {
+        ctx := this._ctx
+        if !IsObject(ctx) {
+            return
+        }
+        this._ComboClearPendingTimer()
+        ctx.runningComboIdx := 0
+        ctx.comboQueue := []
+        ctx.comboQueuePos := 0
+        ctx.comboAbortRequested := false
+    }
+
     static _ComboFinish() {
         ctx := this._ctx
         if !IsObject(ctx) {
@@ -621,6 +647,7 @@ class ExActionRuntime {
             for rule in ctx.rules {
                 ExAction_ResetRuleForInactive(rule)
             }
+            ctx.actionHeldScIDs := Map()
             for profile in ctx.comboProfiles {
                 profile.isHeld := false
             }

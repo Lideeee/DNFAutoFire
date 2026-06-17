@@ -1,5 +1,7 @@
-GetPressKey(){
-    try ShowTip(GetPressKeyPrompt(), false)
+GetPressKey(showTip := true){
+    if showTip {
+        try ShowTip(GetPressKeyPrompt(), false)
+    }
     return GetUserInputKey()
 }
 
