@@ -224,6 +224,7 @@ ComboFlushEditorToProfileAt(idx) {
 ComboLoadProfileToEditor(idx) {
     global __ComboProfiles, __ComboSkillItems
     if (idx < 1 || idx > __ComboProfiles.Length || !__ComboProfiles.Has(idx)) {
+        ComboClearEditor()
         return
     }
     p := __ComboProfiles[idx]
@@ -232,6 +233,15 @@ ComboLoadProfileToEditor(idx) {
     ComboGetCtrl("ComboTriggerKey").Text := p.trigger
     ComboGetCtrl("ComboLoopMode").Value := p.loop
     ComboGetCtrl("ComboBlockOriginal").Value := HasProp(p, "blockOriginal") ? p.blockOriginal : false
+}
+
+ComboClearEditor() {
+    global __ComboSkillItems
+    __ComboSkillItems := []
+    ComboRefreshList()
+    ComboGetCtrl("ComboTriggerKey").Text := ""
+    ComboGetCtrl("ComboLoopMode").Value := false
+    ComboGetCtrl("ComboBlockOriginal").Value := false
 }
 
 ComboRefreshProfileList() {
@@ -338,11 +348,6 @@ ComboProfileChangeToIndex(newIdx) {
 ComboAddProfile(*) {
     global __ComboProfiles, __ComboProfileIndex
     ComboFlushEditorToProfileAt(__ComboProfileIndex)
-    maxCount := ComboProfileMaxCount()
-    if (__ComboProfiles.Length >= maxCount) {
-        MsgBox(exText["ComboMaxProfilesPrefix"] maxCount exText["ComboMaxProfilesSuffix"], exText["ComboTitle"], "Icon!")
-        return
-    }
     __ComboProfiles.Push({ trigger: "", loop: false, blockOriginal: false, skills: [] })
     __ComboProfileIndex := __ComboProfiles.Length
     ComboRefreshProfileList()
@@ -351,8 +356,7 @@ ComboAddProfile(*) {
 
 ComboRemoveProfile(*) {
     global __ComboProfiles, __ComboProfileIndex
-    if (__ComboProfiles.Length <= 1) {
-        MsgBox(exText["ComboKeepOneProfile"], exText["ComboTitle"], "Icon!")
+    if (__ComboProfileIndex < 1 || __ComboProfileIndex > __ComboProfiles.Length || !__ComboProfiles.Has(__ComboProfileIndex)) {
         return
     }
     ComboFlushEditorToProfileAt(__ComboProfileIndex)
@@ -377,20 +381,11 @@ ComboImportProfiles(*) {
         ComboShowImportError(e)
         return
     }
-    maxCount := ComboProfileMaxCount()
-    room := maxCount - __ComboProfiles.Length
-    if (room <= 0) {
-        MsgBox(exText["ComboImportFullPrefix"] maxCount exText["ComboImportFullSuffix"], exText["ComboTitle"], "Icon!")
-        return
-    }
     startIndex := __ComboProfiles.Length + 1
     added := 0
     loop imported.Length {
         if !imported.Has(A_Index) {
             continue
-        }
-        if (added >= room) {
-            break
         }
         p := imported[A_Index]
         if !IsObject(p) {
@@ -411,12 +406,7 @@ ComboImportProfiles(*) {
     __ComboProfileIndex := startIndex
     ComboRefreshProfileList()
     ComboLoadProfileToEditor(__ComboProfileIndex)
-    skipped := imported.Length - added
-    if (skipped > 0) {
-        MsgBox(exText["ComboImportPartialPrefix"] added exText["ComboImportPartialMiddle"] skipped exText["ComboImportPartialSuffix"], exText["ComboTitle"], "Icon!")
-    } else {
-        MsgBox(exText["ComboImportSuccessPrefix"] added exText["ComboImportSuccessSuffix"], exText["ComboTitle"], "Iconi")
-    }
+    MsgBox(exText["ComboImportSuccessPrefix"] added exText["ComboImportSuccessSuffix"], exText["ComboTitle"], "Iconi")
 }
 
 ComboExportProfiles(*) {
@@ -474,29 +464,6 @@ ComboSaveConfig() {
     global __ComboProfiles, __ComboProfileIndex
     presetName := GetNowSelectPreset()
     ComboFlushEditorToProfileAt(__ComboProfileIndex)
-    seen := Map()
-    loop __ComboProfiles.Length {
-        if !__ComboProfiles.Has(A_Index) {
-            continue
-        }
-        t := Trim(String(__ComboProfiles[A_Index].trigger))
-        if (t = "") {
-            continue
-        }
-        c := ComboCanonMainKey(t)
-        if (c = "") {
-            continue
-        }
-        id := Key2SC(GetOriginKeyName(c))
-        if (id = "") {
-            continue
-        }
-        if seen.Has(id) {
-            MsgBox(exText["ComboDuplicateTriggerPrefix"] t exText["ComboDuplicateTriggerSuffix"], exText["ComboTitle"], "Icon!")
-            return false
-        }
-        seen[id] := true
-    }
     SavePreset(presetName, "ComboProfiles", ComboSerializeProfiles(__ComboProfiles))
     SavePreset(presetName, "ComboTriggerKey", "")
     SavePreset(presetName, "ComboLoopMode", false)
@@ -508,10 +475,7 @@ ComboLoadConfig() {
     global __ComboProfiles, __ComboProfileIndex
     presetName := GetNowSelectPreset()
     __ComboProfiles := ComboLoadProfilesFromPreset(presetName)
-    if (__ComboProfiles.Length = 0) {
-        __ComboProfiles.Push({ trigger: "", loop: false, blockOriginal: false, skills: [] })
-    }
-    __ComboProfileIndex := 1
+    __ComboProfileIndex := __ComboProfiles.Length > 0 ? 1 : 0
     ComboRefreshProfileList()
     ComboLoadProfileToEditor(__ComboProfileIndex)
 }

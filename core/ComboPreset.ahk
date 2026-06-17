@@ -69,11 +69,6 @@ ComboCanonMainKey(raw) {
 
 ComboNormalizeDelay(raw) {
     delay := Round((Trim(String(raw)) = "" ? 20 : raw) + 0)
-    if (delay < 20) {
-        delay := 20
-    } else if (delay > 3000) {
-        delay := 3000
-    }
     return delay
 }
 
@@ -85,10 +80,6 @@ ComboProfileRecordSeparator() {
 ComboProfileUnitSeparator() {
     static us := Chr(31)
     return us
-}
-
-ComboProfileMaxCount() {
-    return 64
 }
 
 ComboExportFileSection() {
