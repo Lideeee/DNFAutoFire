@@ -15,56 +15,7 @@ ComboCanonMainKey(raw) {
     if (s = "") {
         return ""
     }
-    all := GetAllKeys()
-    for k in all {
-        if (k = s) {
-            return k
-        }
-    }
-    sl := StrLower(s)
-    for k in all {
-        if (StrLower(k) = sl) {
-            return k
-        }
-    }
-    static alias := Map(
-        "escape", "Esc",
-        "esc", "Esc",
-        "return", "Enter",
-        "enter", "Enter",
-        "bs", "Backspace",
-        "backspace", "Backspace",
-        "capslock", "Caps",
-        "caps", "Caps",
-        "control", "LCtrl",
-        "ctrl", "LCtrl",
-        "lcontrol", "LCtrl",
-        "lctrl", "LCtrl",
-        "rcontrol", "RCtrl",
-        "rctrl", "RCtrl",
-        "shift", "LShift",
-        "lshift", "LShift",
-        "rshift", "RShift",
-        "alt", "LAlt",
-        "lalt", "LAlt",
-        "ralt", "RAlt",
-        "scrolllock", "ScrLk",
-        "printscreen", "PrtSc",
-        "insert", "Ins",
-        "delete", "Del",
-        "pgup", "PgUp",
-        "pgdn", "PgDn",
-        "appskey", "AppsKey"
-    )
-    if alias.Has(sl) {
-        t := alias[sl]
-        for k in all {
-            if (k = t) {
-                return k
-            }
-        }
-    }
-    return ""
+    return s
 }
 
 ComboNormalizeDelay(raw) {
@@ -88,6 +39,14 @@ ComboProfileRecordSeparator() {
 ComboProfileUnitSeparator() {
     static us := Chr(31)
     return us
+}
+
+ComboSkillRecordSeparator() {
+    return "|"
+}
+
+ComboSkillUnitSeparator() {
+    return ":"
 }
 
 ComboExportFileSection() {
@@ -152,6 +111,8 @@ ComboSerializeSkills(items) {
     if !IsObject(items) {
         return data
     }
+    rs := ComboSkillRecordSeparator()
+    us := ComboSkillUnitSeparator()
     loop items.Length {
         if !items.Has(A_Index) {
             continue
@@ -165,22 +126,24 @@ ComboSerializeSkills(items) {
             continue
         }
         delay := HasProp(item, "delay") ? ComboNormalizeDelay(item.delay) : 20
-        data .= key "," delay "|"
-    }
-    if (StrLen(data) > 0) {
-        data := SubStr(data, 1, StrLen(data) - 1)
+        if (data != "") {
+            data .= rs
+        }
+        data .= key us delay
     }
     return data
 }
 
 ComboParseSkills(raw) {
     items := []
-    for unit in StrSplit(raw, "|") {
+    rs := ComboSkillRecordSeparator()
+    us := ComboSkillUnitSeparator()
+    for unit in StrSplit(raw, rs) {
         unit := Trim(unit)
         if (unit = "") {
             continue
         }
-        parts := StrSplit(unit, ",")
+        parts := StrSplit(unit, us,, 2)
         if (parts.Length < 1) {
             continue
         }

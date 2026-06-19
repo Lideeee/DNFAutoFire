@@ -115,19 +115,11 @@ ComboHelp(*) {
 }
 
 ComboCanonMainPressKeyCaptured(key) {
-    canon := ComboCanonMainKey(key)
-    if (canon = "") && key != "" {
-        MsgBox(exText["ComboUnsupportedMainKey"], exText["ComboTitle"], "Icon!")
-    }
-    return canon
+    return ComboCanonMainKey(key)
 }
 
 ComboCanonSkillPressKeyCaptured(key) {
-    canon := ComboCanonMainKey(key)
-    if (canon = "") && key != "" {
-        MsgBox(exText["ComboUnsupportedKey"], exText["ComboTitle"], "Icon!")
-    }
-    return canon
+    return ComboCanonMainKey(key)
 }
 
 ComboMakeDisplay(item) {
@@ -177,9 +169,6 @@ ComboAddSkill(*) {
     }
     key := ComboCanonMainKey(raw)
     if (key = "") {
-        if (raw != "") {
-            MsgBox(exText["ComboUnsupportedKey"], exText["ComboTitle"], "Icon!")
-        }
         return
     }
     __ComboSkillItems.Push({ key: key, delay: 20 })

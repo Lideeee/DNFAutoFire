@@ -86,8 +86,6 @@ global exText := Map(
     "ComboTitle", "一键连招设置",
     "ComboHelpTitle", "一键连招说明",
     "ComboHelp", "在 DNF 窗口内按住「触发按钮」后，按顺序发送技能键。`n可配置多套方案；未设置触发键、触发键无效或没有有效技能的方案会在运行时跳过。`n勾选「循环」时，整套打完后若仍按住触发按钮会重新开始。`n勾选「屏蔽原键」后，触发键自身不会透传给游戏。",
-    "ComboUnsupportedMainKey", "无法识别该按键，请从主键盘或小键盘选取已支持的键。",
-    "ComboUnsupportedKey", "无法识别该按键。",
     "ComboUnsetTrigger", "（未设置）",
     "ComboSkillCountSuffix", " 个技能",
     "ComboImportTitle", "导入连招方案",
