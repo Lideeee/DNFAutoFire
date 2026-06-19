@@ -21,13 +21,7 @@ class AutoPresets {
 
 ; 是否开启「自动识别」（全局，config.ini [设置]）
 AutoPresets_LoadEnabledGlobal() {
-    raw := IniRead(ConfigIniPath(), "设置", "AutoPresetsEnabled", "__MISSING__")
-    if (raw != "__MISSING__") {
-        return AutoPresets_CoerceIniBool(raw)
-    }
-    mig := LoadPreset(LoadLastPreset(), "AutoPresetsState", false)
-    SaveConfig("AutoPresetsEnabled", mig ? 1 : 0)
-    return mig ? true : false
+    return AutoPresets_CoerceIniBool(LoadConfig("AutoPresetsEnabled", false))
 }
 
 AutoPresets_CoerceIniBool(raw) {

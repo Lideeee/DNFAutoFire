@@ -494,9 +494,6 @@ ComboSaveConfig() {
     presetName := GetNowSelectPreset()
     ComboFlushEditorToProfileAt(__ComboProfileIndex)
     SavePreset(presetName, "ComboProfiles", ComboSerializeProfiles(__ComboProfiles))
-    SavePreset(presetName, "ComboTriggerKey", "")
-    SavePreset(presetName, "ComboLoopMode", false)
-    SavePreset(presetName, "ComboSkills", "")
     return true
 }
 

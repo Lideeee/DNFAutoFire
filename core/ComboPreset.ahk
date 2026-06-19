@@ -213,24 +213,14 @@ ComboParseProfiles(raw) {
             continue
         }
         parts := StrSplit(rec, us,, 5)
-        if (parts.Length < 2) {
+        if (parts.Length < 5) {
             continue
         }
         trigger := ComboCanonMainKey(Trim(parts[1]))
-        loopOn := (parts.Length >= 2 && Trim(parts[2]) = "1")
-        blockOriginal := false
-        leadDelay := 20
-        skillsRaw := ""
-        if (parts.Length >= 5) {
-            blockOriginal := Trim(parts[3]) = "1"
-            leadDelay := ComboNormalizeLeadDelay(parts[4])
-            skillsRaw := parts[5]
-        } else if (parts.Length >= 4) {
-            blockOriginal := Trim(parts[3]) = "1"
-            skillsRaw := parts[4]
-        } else {
-            skillsRaw := parts.Length >= 3 ? parts[3] : ""
-        }
+        loopOn := Trim(parts[2]) = "1"
+        blockOriginal := Trim(parts[3]) = "1"
+        leadDelay := ComboNormalizeLeadDelay(parts[4])
+        skillsRaw := parts[5]
         out.Push({ trigger: trigger, loop: loopOn, blockOriginal: blockOriginal, leadDelay: leadDelay, skills: ComboParseSkills(skillsRaw) })
     }
     return out

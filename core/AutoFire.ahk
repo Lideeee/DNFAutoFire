@@ -1,25 +1,10 @@
 ; 全局主键连发间隔（毫秒），保存在 config.ini [设置]；供主界面与子进程复用
 LoadAutoFireGlobalIntervalMs() {
-    AutoFireGlobalInterval_EnsureMigrated()
     return ClampMsMin1(Round(LoadConfig("AutoFireIntervalMs", 20) + 0))
 }
 
 SaveAutoFireGlobalIntervalMs(intervalMs) {
     SaveConfig("AutoFireIntervalMs", ClampMsMin1(intervalMs))
-}
-
-AutoFireGlobalInterval_EnsureMigrated() {
-    static done := false
-    if (done) {
-        return
-    }
-    done := true
-    raw := IniRead(ConfigIniPath(), "设置", "AutoFireIntervalMs", "__MISSING__")
-    if (raw != "__MISSING__") {
-        return
-    }
-    presetName := ResolvePresetName(LoadLastPreset())
-    SaveAutoFireGlobalIntervalMs(LoadPreset(presetName, "AutoFireIntervalMs", 20))
 }
 
 ClampMsMin1(ms) {
