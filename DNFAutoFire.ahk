@@ -42,6 +42,9 @@ EnsureConfigInitialized()
 ; 子进程 /Run=… 仅解析到此为止即进入连发逻辑；主进程在返回后继续加载 GUI 等大段代码
 SubProcessThread.ScriptStart()
 
+; 自定义 IPC 消息：WM_APP + 1，用于“重复打开”时通知已运行实例停止连发并显示主界面
+global IPC_WM_REVEAL_MAIN := 0x8001
+
 global __MainInstanceMutex := EnsureMainSingleInstance()
 
 EnsureMainSingleInstance() {
@@ -51,10 +54,50 @@ EnsureMainSingleInstance() {
         return 0
     }
     if (A_LastError = 183) {
-        MsgBox("DNFAutoFire 已经在运行。", "DNFAutoFire", "Iconi")
+        ; 已有实例在运行：不再弹窗，改为通知它停止连发并显示主界面，然后自身退出
+        NotifyRunningInstanceReveal()
         ExitApp()
     }
     return hMutex
+}
+
+; IPC 监听窗口标题：与互斥量命名同源，保证同一路径下唯一
+MainIpcWindowTitle() {
+    return "DNFAutoFire.IPC." StrReplace(A_ScriptFullPath, "\", ".")
+}
+
+; 重复打开时，通知已经在运行的主实例停止连发并显示主界面
+NotifyRunningInstanceReveal() {
+    global IPC_WM_REVEAL_MAIN
+    ipcTitle := MainIpcWindowTitle()
+    prevDhw := A_DetectHiddenWindows
+    DetectHiddenWindows(true)
+    try {
+        hwnd := WinExist(ipcTitle)
+        if (hwnd) {
+            PostMessage(IPC_WM_REVEAL_MAIN, 0, 0, , "ahk_id " hwnd)
+        }
+    } catch {
+        ; 找不到主实例 IPC 窗口时静默退出，不再弹窗
+    }
+    DetectHiddenWindows(prevDhw)
+}
+
+; 主实例创建隐藏 IPC 监听窗口，接收“重复打开”通知
+global gMainIpcGui := ""
+
+CreateMainIpcListener() {
+    global gMainIpcGui, IPC_WM_REVEAL_MAIN
+    gMainIpcGui := Gui("-Caption +ToolWindow")
+    gMainIpcGui.Title := MainIpcWindowTitle()
+    ; 访问 Hwnd 强制创建窗口；不调用 Show，保持隐藏，仅用于接收 PostMessage
+    _ := gMainIpcGui.Hwnd
+    OnMessage(IPC_WM_REVEAL_MAIN, OnIpcRevealMain)
+}
+
+OnIpcRevealMain(wParam, lParam, msg, hwnd) {
+    ; 复用托盘“连发设置”同一套停止连发并显示主界面的逻辑
+    try RevealStoppedMainGui()
 }
 
 #Include ./lib/GdiPlusSession.ahk
@@ -127,6 +170,7 @@ MainProcessOnExit(*) {
 OnExit(MainProcessOnExit)
 
 RevealStoppedMainGui()
+CreateMainIpcListener()
 RegisterGameWindowGroup()
 if (_AutoStart) {
     EnterRunningMode()
