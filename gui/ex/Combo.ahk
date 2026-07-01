@@ -206,9 +206,6 @@ ComboCloneSkillItems(items) {
             continue
         }
         key := HasProp(it, "key") ? ComboNormalizeStoredKey(it.key) : ""
-        if (key = "") {
-            continue
-        }
         delay := HasProp(it, "delay") ? ComboNormalizeDelay(it.delay) : 20
         hold := HasProp(it, "hold") ? ComboNormalizeHold(it.hold) : ComboSkillHoldDefault()
         out.Push({ key: key, delay: delay, hold: hold })
@@ -481,7 +478,7 @@ ComboSaveConfig() {
     global __ComboProfiles, __ComboProfileIndex
     presetName := GetNowSelectPreset()
     ComboFlushEditorToProfileAt(__ComboProfileIndex)
-    SavePreset(presetName, "ComboProfiles", ComboSerializeProfiles(__ComboProfiles))
+    ComboSaveProfilesToPreset(presetName, __ComboProfiles)
     return true
 }
 

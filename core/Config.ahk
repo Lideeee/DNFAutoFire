@@ -41,7 +41,27 @@ LoadPreset(presetsName, type, default := ""){
 ; 删除预设
 DeletePreset(presetsName){
     presetsName := NormalizePresetName(presetsName)
-    IniDelete(ConfigIniPath(), "预设:" presetsName)
+    path := ConfigIniPath()
+    IniDelete(path, "预设:" presetsName)
+    ; 连带删除所有一键连招子节
+    srcPrefix := "预设:" presetsName ".Combo."
+    srcPrefixLen := StrLen(srcPrefix)
+    sections := ""
+    try sections := IniRead(path)
+    catch {
+        return
+    }
+    for sec in StrSplit(sections, "`n", "`r") {
+        sec := Trim(sec)
+        if (SubStr(sec, 1, srcPrefixLen) != srcPrefix) {
+            continue
+        }
+        tail := SubStr(sec, srcPrefixLen + 1)
+        if !RegExMatch(tail, "^[1-9][0-9]*$") {
+            continue
+        }
+        try IniDelete(path, sec)
+    }
 }
 
 ; 保存预设的连发按键
@@ -214,9 +234,14 @@ LoadAllPreset(){
         sec := Trim(sec)
         if (sec = "")
             continue
-        if (SubStr(sec, 1, 3) = "预设:") {
-            presetList.Push(SubStr(sec, 4))
+        if (SubStr(sec, 1, 3) != "预设:") {
+            continue
         }
+        ; 一键连招子节形如 [预设:职业名.Combo.N]，不计入预设列表
+        if InStr(sec, ".Combo.") {
+            continue
+        }
+        presetList.Push(SubStr(sec, 4))
     }
     return ApplyPresetOrder(presetList)
 }
@@ -291,8 +316,26 @@ GetFirstPresetName() {
 ClonePreset(sourcePresetName, targetPresetName) {
     sourcePresetName := NormalizePresetName(sourcePresetName)
     targetPresetName := NormalizePresetName(targetPresetName)
-    config := IniRead(ConfigIniPath(), "预设:" sourcePresetName)
-    IniWrite(config, ConfigIniPath(), "预设:" targetPresetName)
+    path := ConfigIniPath()
+    ; 复制主节
+    config := IniRead(path, "预设:" sourcePresetName)
+    IniWrite(config, path, "预设:" targetPresetName)
+    ; 连带复制所有一键连招子节 [预设:源.Combo.N] → [预设:目标.Combo.N]
+    srcPrefix := "预设:" sourcePresetName ".Combo."
+    srcPrefixLen := StrLen(srcPrefix)
+    sections := IniRead(path)
+    for sec in StrSplit(sections, "`n", "`r") {
+        sec := Trim(sec)
+        if (SubStr(sec, 1, srcPrefixLen) != srcPrefix) {
+            continue
+        }
+        tail := SubStr(sec, srcPrefixLen + 1)
+        if !RegExMatch(tail, "^[1-9][0-9]*$") {
+            continue
+        }
+        body := IniRead(path, sec)
+        IniWrite(body, path, "预设:" targetPresetName ".Combo." tail)
+    }
 }
 
 CreateBlankPreset(presetName) {
@@ -306,7 +349,6 @@ CreateBlankPreset(presetName) {
     SavePreset(presetName, "XiuLuoState", false)
     SavePreset(presetName, "AutoRunState", false)
     SavePreset(presetName, "ComboState", false)
-    SavePreset(presetName, "ComboProfiles", "")
     SavePreset(presetName, "XiuLuoTriggerKey", "")
     SavePreset(presetName, "XiuLuoXKey", "X")
     SavePreset(presetName, "XiuLuoWaveKey1", "1")
@@ -326,8 +368,27 @@ RenamePreset(oldPresetName, newPresetName) {
     if (oldPresetName = "" || newPresetName = "") {
         return false
     }
-    config := IniRead(ConfigIniPath(), "预设:" oldPresetName)
-    IniWrite(config, ConfigIniPath(), "预设:" newPresetName)
-    IniDelete(ConfigIniPath(), "预设:" oldPresetName)
+    path := ConfigIniPath()
+    ; 主节改名
+    config := IniRead(path, "预设:" oldPresetName)
+    IniWrite(config, path, "预设:" newPresetName)
+    IniDelete(path, "预设:" oldPresetName)
+    ; 连带重命名所有一键连招子节
+    srcPrefix := "预设:" oldPresetName ".Combo."
+    srcPrefixLen := StrLen(srcPrefix)
+    sections := IniRead(path)
+    for sec in StrSplit(sections, "`n", "`r") {
+        sec := Trim(sec)
+        if (SubStr(sec, 1, srcPrefixLen) != srcPrefix) {
+            continue
+        }
+        tail := SubStr(sec, srcPrefixLen + 1)
+        if !RegExMatch(tail, "^[1-9][0-9]*$") {
+            continue
+        }
+        body := IniRead(path, sec)
+        IniWrite(body, path, "预设:" newPresetName ".Combo." tail)
+        IniDelete(path, sec)
+    }
     return true
 }

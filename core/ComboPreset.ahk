@@ -1,6 +1,8 @@
 #Requires AutoHotkey v2.0
 
 ; 一键连招：多方案序列的读写与解析（主进程与子进程共用，勿依赖仅主进程才有的 GUI）
+; 数据布局：每个方案一个独立 INI 节，节名形如 `预设:职业名.Combo.编号`，从 1 起按方案顺序紧凑编号。
+; 方案内字段：Trigger / Loop / BlockOriginal / Skills；Skills 用 `|` 分隔技能，`:` 分隔技能键、间隔与按下保持时间。
 
 ComboPreset_LoadField(presetName, key, default := "") {
     presetName := NormalizePresetName(presetName)
@@ -48,34 +50,12 @@ ComboNormalizeHold(raw) {
     return hold
 }
 
-ComboProfileRecordSeparator() {
-    static rs := Chr(30)
-    return rs
-}
-
-ComboProfileUnitSeparator() {
-    static us := Chr(31)
-    return us
-}
-
 ComboSkillRecordSeparator() {
     return "|"
 }
 
 ComboSkillUnitSeparator() {
     return ":"
-}
-
-ComboExportFileSection() {
-    return "DNFAutoFireComboExport"
-}
-
-ComboBlankProfileMarker() {
-    return "blank"
-}
-
-ComboBlankProfile() {
-    return { trigger: "", loop: false, blockOriginal: false, skills: [] }
 }
 
 ComboNormalizeStoredKey(raw) {
@@ -85,41 +65,117 @@ ComboNormalizeStoredKey(raw) {
     return ComboCanonMainKey(raw)
 }
 
-ComboIsBlankProfile(p) {
-    if !IsObject(p) {
-        return false
-    }
-    trigger := HasProp(p, "trigger") ? ComboNormalizeStoredKey(p.trigger) : ""
-    loopOn := HasProp(p, "loop") && p.loop
-    blockOriginal := HasProp(p, "blockOriginal") && p.blockOriginal
-    skills := (HasProp(p, "skills") && IsObject(p.skills)) ? p.skills : []
-    return trigger = "" && !loopOn && !blockOriginal && ComboSerializeSkills(skills) = ""
+ComboProfileChildPrefix(presetName) {
+    return "预设:" NormalizePresetName(presetName) ".Combo."
 }
 
-ComboWriteExportFile(filePath, profiles) {
-    filePath := Trim(String(filePath))
-    if (filePath = "") {
-        throw Error("EMPTY_PATH")
-    }
-    section := ComboExportFileSection()
-    IniWrite(ComboSerializeProfiles(profiles), filePath, section, "Profiles")
+ComboProfileChildSection(presetName, idx) {
+    return ComboProfileChildPrefix(presetName) idx
 }
 
-ComboReadExportFile(filePath) {
-    filePath := Trim(String(filePath))
-    if (filePath = "" || !FileExist(filePath)) {
-        throw Error("MISSING_FILE")
+; 枚举某预设下的所有一键连招方案编号，按数字升序返回
+ComboListProfileIndices(presetName) {
+    indices := []
+    path := ConfigIniPath()
+    if !FileExist(path) {
+        return indices
     }
-    section := ComboExportFileSection()
-    raw := IniRead(filePath, section, "Profiles", "")
-    if (Trim(String(raw)) = "") {
-        throw Error("MISSING_SECTION")
+    prefix := ComboProfileChildPrefix(presetName)
+    prefixLen := StrLen(prefix)
+    sections := ""
+    try {
+        sections := IniRead(path)
+    } catch {
+        return indices
     }
-    profiles := ComboParseProfiles(raw)
-    if (profiles.Length = 0) {
-        throw Error("EMPTY_PROFILES")
+    for sec in StrSplit(sections, "`n", "`r") {
+        sec := Trim(sec)
+        if (SubStr(sec, 1, prefixLen) != prefix) {
+            continue
+        }
+        tail := SubStr(sec, prefixLen + 1)
+        if !RegExMatch(tail, "^[1-9][0-9]*$") {
+            continue
+        }
+        indices.Push(Number(tail))
+    }
+    ; 插入排序：方案数通常很少
+    loop indices.Length - 1 {
+        i := A_Index + 1
+        key := indices[i]
+        j := i - 1
+        while (j >= 1 && indices[j] > key) {
+            indices[j + 1] := indices[j]
+            j -= 1
+        }
+        indices[j + 1] := key
+    }
+    return indices
+}
+
+ComboReadProfileSection(path, section) {
+    p := { trigger: "", loop: false, blockOriginal: false, skills: [] }
+    if !FileExist(path) {
+        return p
+    }
+    trigger := ""
+    loopOn := "0"
+    blockOriginal := "0"
+    skillsRaw := ""
+    try trigger := IniRead(path, section, "Trigger", "")
+    try loopOn := IniRead(path, section, "Loop", "0")
+    try blockOriginal := IniRead(path, section, "BlockOriginal", "0")
+    try skillsRaw := IniRead(path, section, "Skills", "")
+    p.trigger := ComboCanonMainKey(trigger)
+    p.loop := (Trim(loopOn) = "1")
+    p.blockOriginal := (Trim(blockOriginal) = "1")
+    p.skills := ComboParseSkills(skillsRaw)
+    return p
+}
+
+ComboLoadProfilesFromPreset(presetName) {
+    profiles := []
+    presetName := NormalizePresetName(presetName)
+    if (presetName = "") {
+        return profiles
+    }
+    path := ConfigIniPath()
+    indices := ComboListProfileIndices(presetName)
+    for idx in indices {
+        section := ComboProfileChildSection(presetName, idx)
+        profiles.Push(ComboReadProfileSection(path, section))
     }
     return profiles
+}
+
+ComboSaveProfilesToPreset(presetName, profiles) {
+    presetName := NormalizePresetName(presetName)
+    path := ConfigIniPath()
+    ; 先清除该预设下所有旧方案节，再按数组顺序从 1 起紧凑写入
+    for idx in ComboListProfileIndices(presetName) {
+        try IniDelete(path, ComboProfileChildSection(presetName, idx))
+    }
+    if !IsObject(profiles) {
+        return
+    }
+    loop profiles.Length {
+        if !profiles.Has(A_Index) {
+            continue
+        }
+        p := profiles[A_Index]
+        if !IsObject(p) {
+            continue
+        }
+        section := ComboProfileChildSection(presetName, A_Index)
+        trig := HasProp(p, "trigger") ? ComboNormalizeStoredKey(p.trigger) : ""
+        loopOn := (HasProp(p, "loop") && p.loop) ? "1" : "0"
+        blockOriginal := (HasProp(p, "blockOriginal") && p.blockOriginal) ? "1" : "0"
+        skills := (HasProp(p, "skills") && IsObject(p.skills)) ? p.skills : []
+        IniWrite(trig, path, section, "Trigger")
+        IniWrite(loopOn, path, section, "Loop")
+        IniWrite(blockOriginal, path, section, "BlockOriginal")
+        IniWrite(ComboSerializeSkills(skills), path, section, "Skills")
+    }
 }
 
 ComboSerializeSkills(items) {
@@ -139,9 +195,6 @@ ComboSerializeSkills(items) {
             continue
         }
         key := HasProp(item, "key") ? ComboNormalizeStoredKey(item.key) : ""
-        if (key = "") {
-            continue
-        }
         delay := HasProp(item, "delay") ? ComboNormalizeDelay(item.delay) : 20
         hold := HasProp(item, "hold") ? ComboNormalizeHold(item.hold) : defaultHold
         if (data != "") {
@@ -161,20 +214,13 @@ ComboParseSkills(raw) {
     items := []
     rs := ComboSkillRecordSeparator()
     us := ComboSkillUnitSeparator()
-    defaultHold := ComboSkillHoldDefault()
     for unit in StrSplit(raw, rs) {
         unit := Trim(unit)
         if (unit = "") {
             continue
         }
         parts := StrSplit(unit, us,, 3)
-        if (parts.Length < 1) {
-            continue
-        }
         key := ComboCanonMainKey(Trim(parts[1]))
-        if (key = "") {
-            continue
-        }
         delayRaw := parts.Length >= 2 ? parts[2] : 20
         holdRaw := parts.Length >= 3 ? parts[3] : ""
         items.Push({ key: key, delay: ComboNormalizeDelay(delayRaw), hold: ComboNormalizeHold(holdRaw) })
@@ -182,13 +228,28 @@ ComboParseSkills(raw) {
     return items
 }
 
-ComboSerializeProfiles(profiles) {
-    out := ""
-    if !IsObject(profiles) {
-        return out
+; 导出文件节命名：Combo.编号，避免与主程序的 `预设:` 前缀混淆
+ComboExportProfilePrefix() {
+    return "Combo."
+}
+
+ComboExportProfileSection(idx) {
+    return ComboExportProfilePrefix() idx
+}
+
+ComboWriteExportFile(filePath, profiles) {
+    filePath := Trim(String(filePath))
+    if (filePath = "") {
+        throw Error("EMPTY_PATH")
     }
-    rs := ComboProfileRecordSeparator()
-    us := ComboProfileUnitSeparator()
+    if FileExist(filePath) {
+        FileDelete(filePath)
+    }
+    if !IsObject(profiles) {
+        IniWrite("0", filePath, "DNFAutoFireComboExport", "Count")
+        return
+    }
+    IniWrite(String(profiles.Length), filePath, "DNFAutoFireComboExport", "Count")
     loop profiles.Length {
         if !profiles.Has(A_Index) {
             continue
@@ -197,59 +258,40 @@ ComboSerializeProfiles(profiles) {
         if !IsObject(p) {
             continue
         }
-        if ComboIsBlankProfile(p) {
-            rec := ComboBlankProfileMarker()
-            if (out != "") {
-                out .= rs
-            }
-            out .= rec
-            continue
-        }
+        section := ComboExportProfileSection(A_Index)
         trig := HasProp(p, "trigger") ? ComboNormalizeStoredKey(p.trigger) : ""
         loopOn := (HasProp(p, "loop") && p.loop) ? "1" : "0"
         blockOriginal := (HasProp(p, "blockOriginal") && p.blockOriginal) ? "1" : "0"
         skills := (HasProp(p, "skills") && IsObject(p.skills)) ? p.skills : []
-        skillsStr := ComboSerializeSkills(skills)
-        rec := trig us loopOn us blockOriginal us skillsStr
-        if (out != "") {
-            out .= rs
-        }
-        out .= rec
+        IniWrite(trig, filePath, section, "Trigger")
+        IniWrite(loopOn, filePath, section, "Loop")
+        IniWrite(blockOriginal, filePath, section, "BlockOriginal")
+        IniWrite(ComboSerializeSkills(skills), filePath, section, "Skills")
     }
-    return out
 }
 
-ComboParseProfiles(raw) {
-    out := []
-    raw := Trim(String(raw))
-    if (raw = "") {
-        return out
+ComboReadExportFile(filePath) {
+    filePath := Trim(String(filePath))
+    if (filePath = "" || !FileExist(filePath)) {
+        throw Error("MISSING_FILE")
     }
-    rs := ComboProfileRecordSeparator()
-    us := ComboProfileUnitSeparator()
-    for rec in StrSplit(raw, rs) {
-        rec := Trim(rec)
-        if (rec = "") {
-            continue
-        }
-        if (StrLower(rec) = ComboBlankProfileMarker()) {
-            out.Push(ComboBlankProfile())
-            continue
-        }
-        parts := StrSplit(rec, us)
-        if (parts.Length != 4) {
-            continue
-        }
-        trigger := ComboCanonMainKey(Trim(parts[1]))
-        loopOn := Trim(parts[2]) = "1"
-        blockOriginal := Trim(parts[3]) = "1"
-        skillsRaw := parts[4]
-        out.Push({ trigger: trigger, loop: loopOn, blockOriginal: blockOriginal, skills: ComboParseSkills(skillsRaw) })
+    countRaw := ""
+    try countRaw := IniRead(filePath, "DNFAutoFireComboExport", "Count", "")
+    if (Trim(String(countRaw)) = "") {
+        throw Error("MISSING_SECTION")
     }
-    return out
-}
-
-ComboLoadProfilesFromPreset(presetName) {
-    raw := ComboPreset_LoadField(presetName, "ComboProfiles")
-    return ComboParseProfiles(raw)
+    count := Round(countRaw + 0)
+    if (count <= 0) {
+        throw Error("EMPTY_PROFILES")
+    }
+    profiles := []
+    loop count {
+        section := ComboExportProfileSection(A_Index)
+        ; 缺失的节视为空方案，不抛错
+        profiles.Push(ComboReadProfileSection(filePath, section))
+    }
+    if (profiles.Length = 0) {
+        throw Error("EMPTY_PROFILES")
+    }
+    return profiles
 }
