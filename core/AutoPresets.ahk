@@ -10,6 +10,9 @@ class AutoPresets {
     static TownImageVariation := 20
     static RegionCornerRadius := 12
     static RegionMaskRgb := "White"
+    static SearchExpandRatio := 0.05
+    static SearchExpandMinX := 6
+    static SearchExpandMinY := 4
     static _retryTimer := false
     static _startTimer := false
     static _registeredEsc := false
@@ -38,6 +41,32 @@ AutoPresetsSkillIconDir() => AutoPresetsAssetDir() "\skills"
 
 AutoPresetsSkillIcon_SafeName(presetName) {
     return RegExReplace(StrReplace(presetName, "|", "_"), '[\\/:\*\?"<>\|]', "_")
+}
+
+AutoPresets_GetGameClientRect() {
+    title := FindDNFGameWindowTitle()
+    if (title = "") {
+        return ""
+    }
+    try {
+        WinGetClientPos(&cx, &cy, &cw, &ch, title)
+    } catch {
+        return ""
+    }
+    if (cw < 1 || ch < 1) {
+        return ""
+    }
+    return Map("x", cx, "y", cy, "w", cw, "h", ch, "title", title)
+}
+
+AutoPresetsResolutionKey(client := "") {
+    if !IsObject(client) {
+        client := AutoPresets_GetGameClientRect()
+    }
+    if !IsObject(client) {
+        return ""
+    }
+    return client["w"] "x" client["h"]
 }
 
 AutoPresetsSkillPresetDir(presetName) {
@@ -211,9 +240,7 @@ AutoPresetsSkillIcon_Add(presetName) {
     path := AutoPresetsSkillIconPathForId(name, skillId)
     r := AutoPresets_ResolveRegion(ParseAutoPresetRegion())
     AutoPresetsCaptureRegionToPng(path, r["x"], r["y"], r["w"], r["h"])
-    items := AutoPresetsSkillIcons_Load(name)
-    items.Push(Map("id", skillId, "name", displayName, "path", path))
-    AutoPresetsSkillIcons_Save(name, items)
+    AutoPresetsSkillIcons_Save(name, AutoPresetsSkillIcons_Load(name))
     return Map("id", skillId, "name", displayName, "path", path)
 }
 
@@ -290,18 +317,103 @@ AutoPresets_OnPresetDeleted(presetName) {
 
 AutoPresetsTownIconDir() => AutoPresetsAssetDir() "\town"
 
-AutoPresetsTownIconGlobalPath() {
-    return AutoPresetsTownIconDir() "\town.png"
+AutoPresetsTownIconCurrentPath() {
+    resKey := AutoPresetsResolutionKey()
+    if (resKey = "") {
+        throw Error("未找到 DNF 游戏窗口，无法按分辨率保存城镇识别图。")
+    }
+    return AutoPresetsTownIconDir() "\" resKey ".png"
+}
+
+AutoPresetsTownIconPaths() {
+    paths := []
+    dir := AutoPresetsTownIconDir()
+    if !DirExist(dir) {
+        return paths
+    }
+    Loop Files dir "\*.png" {
+        if !RegExMatch(A_LoopFileName, "^\d+x\d+\.png$") {
+            continue
+        }
+        paths.Push(A_LoopFileFullPath)
+    }
+    return paths
+}
+
+AutoPresetsTownIconPreviewPath() {
+    try {
+        p := AutoPresetsTownIconCurrentPath()
+        if FileExist(p) {
+            return p
+        }
+    } catch {
+    }
+    for p in AutoPresetsTownIconPaths() {
+        return p
+    }
+    return ""
 }
 
 AutoPresets_DefaultRegion() {
     w := 200
     h := 90
+    client := AutoPresets_GetGameClientRect()
+    if IsObject(client) {
+        return Map("x", client["x"] + (client["w"] - w) // 2, "y", client["y"] + (client["h"] - h) // 2, "w", w, "h", h)
+    }
     return Map("x", (A_ScreenWidth - w) // 2, "y", (A_ScreenHeight - h) // 2, "w", w, "h", h)
 }
 
-AutoPresets_ResolveRegion(region) {
-    return region.Has("w") ? region : AutoPresets_DefaultRegion()
+AutoPresets_ResolveRegion(region, expandForSearch := false) {
+    if !IsObject(region) || !region.Has("mode") || region["mode"] != "clientRatio" {
+        return AutoPresets_DefaultRegion()
+    }
+    client := AutoPresets_GetGameClientRect()
+    if !IsObject(client) {
+        return AutoPresets_DefaultRegion()
+    }
+    x := client["x"] + Round(region["rx"] * client["w"])
+    y := client["y"] + Round(region["ry"] * client["h"])
+    w := Max(1, Round(region["rw"] * client["w"]))
+    h := Max(1, Round(region["rh"] * client["h"]))
+    out := Map("x", x, "y", y, "w", w, "h", h, "client", client)
+    return expandForSearch ? AutoPresets_ExpandSearchRegion(out, client) : out
+}
+
+AutoPresets_ExpandSearchRegion(region, client := "") {
+    if !IsObject(region) || !region.Has("w") {
+        return region
+    }
+    mx := Max(AutoPresets.SearchExpandMinX, Round(region["w"] * AutoPresets.SearchExpandRatio))
+    my := Max(AutoPresets.SearchExpandMinY, Round(region["h"] * AutoPresets.SearchExpandRatio))
+    x := region["x"] - mx
+    y := region["y"] - my
+    w := region["w"] + mx * 2
+    h := region["h"] + my * 2
+    if IsObject(client) {
+        left := client["x"]
+        top := client["y"]
+        right := client["x"] + client["w"]
+        bottom := client["y"] + client["h"]
+        x2 := Min(right, x + w)
+        y2 := Min(bottom, y + h)
+        x := Max(left, x)
+        y := Max(top, y)
+        w := Max(1, x2 - x)
+        h := Max(1, y2 - y)
+    } else {
+        x2 := Min(A_ScreenWidth, x + w)
+        y2 := Min(A_ScreenHeight, y + h)
+        x := Max(0, x)
+        y := Max(0, y)
+        w := Max(1, x2 - x)
+        h := Max(1, y2 - y)
+    }
+    out := Map("x", x, "y", y, "w", w, "h", h)
+    if IsObject(client) {
+        out["client"] := client
+    }
+    return out
 }
 
 ParseAutoPresetRegionByKey(configKey) {
@@ -311,29 +423,45 @@ ParseAutoPresetRegionByKey(configKey) {
         return out
     }
     parts := StrSplit(raw, "|")
-    if (parts.Length < 4) {
+    if (parts.Length < 7 || parts[1] != "clientRatio") {
         return out
     }
     try {
-        x := Integer(parts[1])
-        y := Integer(parts[2])
-        w := Integer(parts[3])
-        h := Integer(parts[4])
+        baseW := Integer(parts[2])
+        baseH := Integer(parts[3])
+        rx := parts[4] + 0
+        ry := parts[5] + 0
+        rw := parts[6] + 0
+        rh := parts[7] + 0
     } catch {
         return out
     }
-    if (w < 1 || h < 1) {
+    if (baseW < 1 || baseH < 1 || rw <= 0 || rh <= 0) {
         return out
     }
-    out["x"] := x
-    out["y"] := y
-    out["w"] := w
-    out["h"] := h
+    out["mode"] := "clientRatio"
+    out["baseW"] := baseW
+    out["baseH"] := baseH
+    out["rx"] := rx
+    out["ry"] := ry
+    out["rw"] := rw
+    out["rh"] := rh
+    out["w"] := Max(1, Round(rw * baseW))
+    out["h"] := Max(1, Round(rh * baseH))
     return out
 }
 
 SaveAutoPresetRegionByKey(configKey, x, y, w, h) {
-    SaveConfig(configKey, x "|" y "|" w "|" h)
+    client := AutoPresets_GetGameClientRect()
+    if !IsObject(client) {
+        throw Error("未找到 DNF 游戏窗口，无法保存客户区相对识别区域。")
+    }
+    rx := (x - client["x"]) / client["w"]
+    ry := (y - client["y"]) / client["h"]
+    rw := w / client["w"]
+    rh := h / client["h"]
+    SaveConfig(configKey, "clientRatio|" client["w"] "|" client["h"] "|"
+        Round(rx, 6) "|" Round(ry, 6) "|" Round(rw, 6) "|" Round(rh, 6))
 }
 
 ParseAutoPresetTownRegion() {
@@ -345,7 +473,7 @@ SaveAutoPresetTownRegion(x, y, w, h) {
 }
 
 AutoPresets_HasAnyTownPng() {
-    return FileExist(AutoPresetsTownIconGlobalPath())
+    return AutoPresetsTownIconPaths().Length > 0
 }
 
 AutoPresets_GameActive() {
@@ -577,15 +705,15 @@ AutoPresetsSkillIcon_RenderFitPreviewToFile(srcPath, boxW, boxH, destPath) {
 
 AutoPresetsTownIcon_UpdateCurrent() {
     r := AutoPresets_ResolveRegion(ParseAutoPresetTownRegion())
-    path := AutoPresetsTownIconGlobalPath()
+    path := AutoPresetsTownIconCurrentPath()
     AutoPresetsCaptureRegionToPng(path, r["x"], r["y"], r["w"], r["h"])
     return path
 }
 
 AutoPresetsTownIconMatches() {
-    r := AutoPresets_ResolveRegion(ParseAutoPresetTownRegion())
-    path := AutoPresetsTownIconGlobalPath()
-    if !FileExist(path) {
+    r := AutoPresets_ResolveRegion(ParseAutoPresetTownRegion(), true)
+    paths := AutoPresetsTownIconPaths()
+    if (paths.Length = 0) {
         return false
     }
     x1 := r["x"]
@@ -594,14 +722,16 @@ AutoPresetsTownIconMatches() {
     y2 := y1 + r["h"] - 1
     variation := AutoPresets.TownImageVariation
     optPrefix := AutoPresets_ImageSearchPrefix(variation)
-    needle := optPrefix . path
     prevPixel := CoordMode("Pixel", "Screen")
     try {
-        try {
-            if ImageSearch(&_icx, &_icy, x1, y1, x2, y2, needle) {
-                return true
+        for path in paths {
+            needle := optPrefix . path
+            try {
+                if ImageSearch(&_icx, &_icy, x1, y1, x2, y2, needle) {
+                    return true
+                }
+            } catch TargetError {
             }
-        } catch TargetError {
         }
         return false
     } finally {
@@ -625,7 +755,7 @@ AutoPresetsSkillIcon_UpdateForPreset(presetName, skillId := "") {
 }
 
 AutoPresetsFindPresetBySkillIcon() {
-    r := AutoPresets_ResolveRegion(ParseAutoPresetRegion())
+    r := AutoPresets_ResolveRegion(ParseAutoPresetRegion(), true)
     x1 := r["x"]
     y1 := r["y"]
     x2 := x1 + r["w"] - 1

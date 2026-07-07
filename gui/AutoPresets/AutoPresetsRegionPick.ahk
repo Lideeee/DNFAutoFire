@@ -268,6 +268,7 @@ PresetRegionPickOpen(kind := "skill") {
     } else {
         r := ParseAutoPresetRegion()
     }
+    r := AutoPresets_ResolveRegion(r)
     if r.Has("w") {
         PresetRegionPickSetOuterFromClientScreen(hwnd, r["x"], r["y"], r["w"], r["h"])
     } else {
@@ -367,10 +368,15 @@ PresetRegionPickOk(*) {
     w := cr["w"]
     h := cr["h"]
     kind := gAutoPresetsRegionPickKind
-    if (kind = "town") {
-        SaveAutoPresetTownRegion(x, y, w, h)
-    } else {
-        SaveAutoPresetRegion(x, y, w, h)
+    try {
+        if (kind = "town") {
+            SaveAutoPresetTownRegion(x, y, w, h)
+        } else {
+            SaveAutoPresetRegion(x, y, w, h)
+        }
+    } catch Error as e {
+        MsgBox(e.Message,, "Icon!")
+        return
     }
     try AutoPresetsAfterRegionPick(kind)
     PresetRegionPickClose()
